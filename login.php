@@ -53,6 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     case 'registrar':
                         header("Location: registrar_dashboard.php");
                         break;
+                    case 'admin':
+                        header("Location: dashboard_admin.php");
+                        break;
                     default:
                         error_log("Unknown role for $username: " . $user['role']);
                         echo "Error: Unknown role!";
@@ -69,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Login error for $username: " . $e->getMessage());
     }
 }
-
 $conn->close();
 ?>
 <!DOCTYPE html>

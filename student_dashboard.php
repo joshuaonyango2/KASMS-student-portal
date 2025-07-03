@@ -1,31 +1,35 @@
 <?php
-// Start session securely
+// Start session securely and include session handling file
 require_once 'session_handler.php';
 initializeSessionHandler();
 
-// Redirect unauthorized users
+// Redirect unauthorized users who are not logged in as students
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student') {
     header("Location: index.php");
     exit();
 }
 
-// Database connection with error handling
+// Establish database connection with error handling using mysqli
 $conn = new mysqli("p:localhost", "root", "0000", "kasms_db");
 if ($conn->connect_error) {
+    // Log database connection errors for debugging
     error_log("Database connection failed: " . $conn->connect_error);
     die("System maintenance in progress. Please try again later.");
 }
 
+// Retrieve student ID from session
 $student_id = $_SESSION['student_id'];
 
 // Fetch student details, using course as program_name
 $stmt = $conn->prepare("SELECT s.student_id, s.name, s.id_number, s.gender, s.date_of_birth, s.phone_number, s.email_address, s.postal_address, s.total_billed, s.total_paid, s.year_of_study, s.course FROM students s WHERE s.student_id = ?");
 if (!$stmt) {
+    // Log prepare statement failure
     error_log("Prepare failed: " . $conn->error);
     die("An error occurred. Please try again later.");
 }
 $stmt->bind_param("s", $student_id);
 if (!$stmt->execute()) {
+    // Log execute statement failure
     error_log("Execute failed: " . $stmt->error);
     die("An error occurred. Please try again later.");
 }
@@ -35,7 +39,8 @@ $stmt->close();
 // Fetch department based on course
 $department = '';
 if ($student['course']) {
-    $stmt = $conn->prepare("SELECT department FROM courses WHERE course_name = ?");
+    // Prepare statement to get department from courses table using course name
+    $stmt = $conn->prepare("SELECT department FROM courses WHERE course = ?");
     $stmt->bind_param("s", $student['course']);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -48,9 +53,9 @@ if ($student['course']) {
 $year_of_study = $student['year_of_study'] ?? 1;
 $course = $student['course'] ?? 'Program Not Assigned';
 
-// Get current semester/year
+// Get current semester/year based on current date (July 03, 2025, 12:41 PM EAT)
 $current_semester = '2025-S1';
-$current_year = date('Y', strtotime('01:52 PM EAT')); // Set to July 02, 2025
+$current_year = date('Y', strtotime('12:41 PM EAT')); // Adjusted for current date
 
 // Fetch registered courses
 $stmt = $conn->prepare("SELECT r.course AS program_name, r.semester, r.stage, r.registration_date, GROUP_CONCAT(r.unit_code) as unit_codes, GROUP_CONCAT(r.unit_name) as unit_names FROM registrations r WHERE r.student_id = ? AND r.course = ? GROUP BY r.course, r.semester, r.stage, r.registration_date ORDER BY r.registration_date DESC");
@@ -198,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password'])) {
             error_log("Execute failed: " . $stmt->error);
             die("An error occurred. Please try again later.");
         }
-        $user = $stmt->get_result()->fetch_assoc() ?: [];
+        $user = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
         if ($user && password_verify($old_password, $user['password'])) {
@@ -226,11 +231,14 @@ $conn->close();
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Define character encoding and responsive viewport -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KASMS Student Portal</title>
+    <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Define CSS variables for consistent theming */
         :root {
             --primary: #2c3e50;
             --secondary: #3498db;
@@ -245,6 +253,7 @@ $conn->close();
             --border: #e0e0e0;
         }
 
+        /* Reset default styles and set global box-sizing */
         * {
             margin: 0;
             padding: 0;
@@ -603,6 +612,24 @@ $conn->close();
             border: 1px solid rgba(231, 76, 60, 0.3);
         }
 
+        .coursework-details {
+            display: none;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .coursework-details.show {
+            display: block;
+        }
+        .unit-list {
+            list-style: none;
+            padding-left: 20px;
+        }
+        .unit-list li {
+            margin-bottom: 10px;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -639,11 +666,14 @@ $conn->close();
     </style>
 </head>
 <body>
+    <!-- Main dashboard container with sidebar and main content -->
     <div class="dashboard-container">
         <aside class="sidebar">
+            <!-- Sidebar header with KASMS logo -->
             <div class="sidebar-header">
                 <h2><i class="fas fa-graduation-cap"></i> KASMS</h2>
             </div>
+            <!-- Sidebar menu items -->
             <ul class="sidebar-menu">
                 <li class="menu-item">
                     <a href="#" class="menu-link active" onclick="showSection('profileSection')">
@@ -682,6 +712,7 @@ $conn->close();
         </aside>
 
         <main class="main-content">
+            <!-- Header with user info and logout button -->
             <div class="header">
                 <button class="menu-toggle" onclick="toggleSidebar()">
                     <i class="fas fa-bars"></i>
@@ -698,6 +729,7 @@ $conn->close();
                 </button>
             </div>
 
+            <!-- Profile Section -->
             <section id="profileSection" class="section active">
                 <h2 class="section-title"><i class="fas fa-user"></i> Student Profile</h2>
                 <div class="profile-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -746,160 +778,162 @@ $conn->close();
                 </div>
             </section>
 
-            <section id="courseRegistrationSection" class="section">
-                <div class="registration-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div class="registration-title">
-                        <i class="fas fa-book"></i>
-                        <h2>Course Registration</h2>
-                    </div>
-                </div>
-                <?php if ($registration_success): ?>
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> <?php echo $registration_success; ?>
-                    </div>
-                <?php endif; ?>
-                <?php if ($registration_error): ?>
-                    <div class="alert alert-error">
-                        <i class="fas fa-exclamation-circle"></i> <?php echo $registration_error; ?>
-                    </div>
-                <?php endif; ?>
-                <h3><i class="fas fa-list"></i> Course Registration List</h3>
-                <table class="registration-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Programme Name</th>
-                            <th>Semester</th>
-                            <th>Nominal Roll</th>
-                            <th>
-                                <div class="dropdown">
-                                    <button class="new-registration-btn" onclick="toggleRegistrationDropdown()" <?php echo $registration_disabled ? 'disabled' : ''; ?>>
-                                        + New Registration
-                                    </button>
-                                    <div class="registration-dropdown" id="registrationDropdown">
-                                        <form method="post" action="" id="registrationForm">
-                                            <div class="form-group">
-                                                <label class="form-label">Stage</label>
-                                                <input type="text" class="form-input" name="stage" value="Year <?php echo $year_of_study; ?> Semester 1" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label class="form-label">Program</label>
-                                                <input type="text" class="form-input" name="course" value="<?php echo htmlspecialchars($course); ?>" readonly>
-                                            </div>
-                                            <div class="unit-selector">
-                                                <div class="unit-box">
-                                                    <h4><i class="fas fa-list"></i> Available Units</h4>
-                                                    <p class="unit-count">Units: <span id="availableCount"><?php echo count($available_units); ?></span></p>
-                                                    <select id="availableUnitsSelect" class="unit-select" multiple size="8">
-                                                        <?php foreach ($available_units as $unit): ?>
-                                                            <option value="<?php echo htmlspecialchars($unit['unit_code']); ?>">
-                                                                <?php echo htmlspecialchars($unit['unit_code'] . ' - ' . $unit['unit_name']); ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <div class="unit-actions">
-                                                    <button class="action-btn" onclick="addUnit(event)" id="addUnit">
-                                                        <i class="fas fa-arrow-right"></i> Add
-                                                    </button>
-                                                    <button class="action-btn" onclick="removeUnit(event)" id="removeUnit">
-                                                        <i class="fas fa-arrow-left"></i> Remove
-                                                    </button>
-                                                    <button class="action-btn" onclick="clearSelection(event)" id="clearSelection">
-                                                        <i class="fas fa-times"></i> Clear
-                                                    </button>
-                                                </div>
-                                                <div class="unit-box">
-                                                    <h4><i class="fas fa-check-circle"></i> Chosen Units</h4>
-                                                    <p class="unit-count">Units: <span id="selectedCount">0</span> <span id="minUnitsWarning" style="color: var(--danger); display: none;">(Min 6 required)</span></p>
-                                                    <select id="selectedUnitsSelect" class="unit-select" multiple size="8"></select>
-                                                </div>
-                                            </div>
-                                            <div class="submit-container">
-                                                <input type="hidden" name="selected_units" id="selectedUnitsHidden">
-                                                <button type="submit" name="register_units" class="submit-btn" id="registerSubmit" disabled>
-                                                    <i class="fas fa-paper-plane"></i> Submit Registration
-                                                </button>
-                                            </div>
-                                        </form>
+<!-- Course Registration Section -->
+<section id="courseRegistrationSection" class="section">
+    <div class="registration-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="registration-title">
+            <i class="fas fa-book"></i>
+            <h2>Course Registration</h2>
+        </div>
+    </div>
+    <?php if ($registration_success): ?>
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> <?php echo $registration_success; ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($registration_error): ?>
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i> <?php echo $registration_error; ?>
+        </div>
+    <?php endif; ?>
+    <h3><i class="fas fa-list"></i> Course Registration List</h3>
+    <table class="registration-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Programme Name</th>
+                <th>Semester</th>
+                <th>Nominal Roll</th>
+                <th>
+                    <div class="dropdown">
+                        <button class="new-registration-btn" onclick="toggleRegistrationDropdown()" <?php echo $registration_disabled ? 'disabled' : ''; ?>>
+                            + New Registration
+                        </button>
+                        <div class="registration-dropdown" id="registrationDropdown">
+                            <!-- Existing registration dropdown form remains unchanged -->
+                            <form method="post" action="" id="registrationForm">
+                                <div class="form-group">
+                                    <label class="form-label">Stage</label>
+                                    <input type="text" class="form-input" name="stage" value="Year <?php echo $year_of_study; ?> Semester 1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Program</label>
+                                    <input type="text" class="form-input" name="course" value="<?php echo htmlspecialchars($course); ?>" readonly>
+                                </div>
+                                <div class="unit-selector">
+                                    <div class="unit-box">
+                                        <h4><i class="fas fa-list"></i> Available Units</h4>
+                                        <p class="unit-count">Units: <span id="availableCount"><?php echo count($available_units); ?></span></p>
+                                        <select id="availableUnitsSelect" class="unit-select" multiple size="8">
+                                            <?php foreach ($available_units as $unit): ?>
+                                                <option value="<?php echo htmlspecialchars($unit['unit_code']); ?>">
+                                                    <?php echo htmlspecialchars($unit['unit_code'] . ' - ' . $unit['unit_name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="unit-actions">
+                                        <button class="action-btn" onclick="addUnit(event)" id="addUnit">
+                                            <i class="fas fa-arrow-right"></i> Add
+                                        </button>
+                                        <button class="action-btn" onclick="removeUnit(event)" id="removeUnit">
+                                            <i class="fas fa-arrow-left"></i> Remove
+                                        </button>
+                                        <button class="action-btn" onclick="clearSelection(event)" id="clearSelection">
+                                            <i class="fas fa-times"></i> Clear
+                                        </button>
+                                    </div>
+                                    <div class="unit-box">
+                                        <h4><i class="fas fa-check-circle"></i> Chosen Units</h4>
+                                        <p class="unit-count">Units: <span id="selectedCount">0</span> <span id="minUnitsWarning" style="color: var(--danger); display: none;">(Min 6 required)</span></p>
+                                        <select id="selectedUnitsSelect" class="unit-select" multiple size="8"></select>
                                     </div>
                                 </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (is_array($registrations) && !empty($registrations)): ?>
-                            <?php foreach ($registrations as $index => $reg): ?>
-                                <tr>
-                                    <td><?php echo $index + 1; ?></td>
-                                    <td><?php echo htmlspecialchars($department); ?></td>
-                                    <td><?php echo htmlspecialchars($reg['semester'] ?? 'N/A'); ?></td>
-                                    <td><?php echo !empty($reg['registration_date']) ? date('d/m/Y', strtotime($reg['registration_date'])) : 'N/A'; ?></td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <button class="dropdown-btn">Actions</button>
-                                            <div class="dropdown-content">
-                                                <?php
-                                                $payment_percentage = ($student['total_billed'] > 0) ? ($student['total_paid'] / $student['total_billed']) * 100 : 0;
-                                                if ($payment_percentage >= 98):
-                                                ?>
-                                                    <a href="generate_exam_card.php?semester=<?php echo urlencode($reg['semester'] ?? ''); ?>">Exam Card</a>
-                                                <?php else: ?>
-                                                    <a href="#" onclick="alert('You must pay at least 98% of fees to download the exam card.');">Exam Card</a>
-                                                <?php endif; ?>
-                                                <a href="#" onclick="showRegistrationDetails(<?php echo $index; ?>)">View Registration</a>
-                                                <a href="#" onclick="showUnits(<?php echo $index; ?>)">View Units</a>
-                                                <a href="#" onclick="alert('Please visit the finance office to delete this registration.');">Delete Registration</a>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr id="regDetails<?php echo $index; ?>" style="display:none;">
-                                    <td colspan="5">
-                                        <div class="profile-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
-                                            <h4>Registration Details</h4>
-                                            <p><strong>Program:</strong> <?php echo htmlspecialchars($reg['program_name'] ?? 'N/A'); ?></p>
-                                            <p><strong>Semester:</strong> <?php echo htmlspecialchars($reg['semester'] ?? 'N/A'); ?></p>
-                                            <p><strong>Stage:</strong> <?php echo htmlspecialchars($reg['stage'] ?? 'N/A'); ?></p>
-                                            <p><strong>Units Taken:</strong> <?php echo !empty($reg['unit_codes']) ? count(explode(',', $reg['unit_codes'])) : 0; ?></p>
-                                            <p><strong>Registration Date:</strong> <?php echo !empty($reg['registration_date']) ? date('d/m/Y', strtotime($reg['registration_date'])) : 'N/A'; ?></p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr id="units<?php echo $index; ?>" style="display:none;">
-                                    <td colspan="5">
-                                        <div class="profile-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
-                                            <h4>Registered Units</h4>
-                                            <ul style="list-style: none;">
-                                                <?php
-                                                $unit_codes = !empty($reg['unit_codes']) ? explode(',', $reg['unit_codes']) : [];
-                                                $unit_names = !empty($reg['unit_names']) ? explode(',', $reg['unit_names']) : [];
-                                                foreach ($unit_codes as $i => $code):
-                                                ?>
-                                                    <li style="margin-bottom: 10px;"><?php echo htmlspecialchars($code . ' - ' . ($unit_names[$i] ?? 'N/A')); ?></li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="5">No registrations found.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </section>
+                                <div class="submit-container">
+                                    <input type="hidden" name="selected_units" id="selectedUnitsHidden">
+                                    <button type="submit" name="register_units" class="submit-btn" id="registerSubmit" disabled>
+                                        <i class="fas fa-paper-plane"></i> Submit Registration
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (is_array($registrations) && !empty($registrations)): ?>
+                <?php foreach ($registrations as $index => $reg): ?>
+                    <tr>
+                        <td><?php echo $index + 1; ?></td>
+                        <td><?php echo htmlspecialchars($reg['program_name'] ?? $student['course'] ?? 'N/A'); ?></td>
+                        <td><?php echo htmlspecialchars($reg['semester'] ?? 'N/A'); ?></td>
+                        <td><?php echo !empty($reg['registration_date']) ? date('d/m/Y', strtotime($reg['registration_date'])) : 'N/A'; ?></td>
+                        <td>
+                            <div class="dropdown">
+                                <button class="dropdown-btn">Actions</button>
+                                <div class="dropdown-content">
+                                    <?php
+                                    $payment_percentage = ($student['total_billed'] > 0) ? ($student['total_paid'] / $student['total_billed']) * 100 : 0;
+                                    if ($payment_percentage >= 98):
+                                    ?>
+                                        <a href="generate_exam_card.php?semester=<?php echo urlencode($reg['semester'] ?? ''); ?>">Exam Card</a>
+                                    <?php else: ?>
+                                        <a href="#" onclick="alert('You must pay at least 98% of fees to download the exam card.');">Exam Card</a>
+                                    <?php endif; ?>
+                                    <a href="#" onclick="showRegistrationDetails(<?php echo $index; ?>)">View Registration</a>
+                                    <a href="#" onclick="showUnits(<?php echo $index; ?>)">View Units</a>
+                                    <a href="#" onclick="alert('Please visit the finance office to delete this registration.');">Delete Registration</a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="regDetails<?php echo $index; ?>" style="display:none;">
+                        <td colspan="5">
+                            <div class="profile-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
+                                <h4>Registration Details</h4>
+                                <p><strong>Program:</strong> <?php echo htmlspecialchars($reg['program_name'] ?? $student['course'] ?? 'N/A'); ?></p>
+                                <p><strong>Semester:</strong> <?php echo htmlspecialchars($reg['semester'] ?? 'N/A'); ?></p>
+                                <p><strong>Stage:</strong> <?php echo htmlspecialchars($reg['stage'] ?? 'N/A'); ?></p>
+                                <p><strong>Units Taken:</strong> <?php echo !empty($reg['unit_codes']) ? count(explode(',', $reg['unit_codes'])) : 0; ?></p>
+                                <p><strong>Registration Date:</strong> <?php echo !empty($reg['registration_date']) ? date('d/m/Y', strtotime($reg['registration_date'])) : 'N/A'; ?></p>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="units<?php echo $index; ?>" style="display:none;">
+                        <td colspan="5">
+                            <div class="profile-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
+                                <h4>Registered Units</h4>
+                                <ul style="list-style: none;">
+                                    <?php
+                                    $unit_codes = !empty($reg['unit_codes']) ? explode(',', $reg['unit_codes']) : [];
+                                    $unit_names = !empty($reg['unit_names']) ? explode(',', $reg['unit_names']) : [];
+                                    foreach ($unit_codes as $i => $code):
+                                    ?>
+                                        <li style="margin-bottom: 10px;"><?php echo htmlspecialchars($code . ' - ' . ($unit_names[$i] ?? 'N/A')); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr><td colspan="5">No registrations found.</td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</section>
 
+            <!-- Coursework Section -->
             <section id="courseworkSection" class="section">
                 <h2 class="section-title"><i class="fas fa-book"></i> Coursework</h2>
                 <table class="registration-table">
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>Unit Code</th>
-                            <th>Unit Name</th>
+                            <th>Programme Name</th>
                             <th>Semester</th>
-                            <th>CAT 1 Score</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -907,19 +941,46 @@ $conn->close();
                             <?php foreach ($coursework as $index => $cw): ?>
                                 <tr>
                                     <td><?php echo $index + 1; ?></td>
-                                    <td><?php echo htmlspecialchars($cw['unit_code'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($cw['unit_name'] ?? 'N/A'); ?></td>
+                                    <td><?php echo htmlspecialchars($course); ?></td>
                                     <td><?php echo htmlspecialchars($cw['semester'] ?? 'N/A'); ?></td>
-                                    <td><?php echo htmlspecialchars($cw['cat1'] ?? 'N/A'); ?></td>
+                                    <td>
+                                        <button class="submit-btn" onclick="toggleCourseworkDetails(<?php echo $index; ?>)">View Coursework</button>
+                                    </td>
+                                </tr>
+                                <tr id="courseworkDetails<?php echo $index; ?>" class="coursework-details">
+                                    <td colspan="4">
+                                        <div class="profile-card" style="background: var(--card-bg); padding: 15px; border-radius: 8px;">
+                                            <h4>Coursework Details</h4>
+                                            <p><strong>Semester:</strong> <?php echo htmlspecialchars($cw['semester'] ?? 'N/A'); ?></strong></p>
+                                            <h5>Registered Units:</h5>
+                                            <ul class="unit-list">
+                                                <?php
+                                                $stmt = $conn->prepare("SELECT unit_code, unit_name FROM registrations WHERE student_id = ? AND semester = ?");
+                                                $stmt->bind_param("ss", $student_id, $cw['semester']);
+                                                $stmt->execute();
+                                                $units = $stmt->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
+                                                foreach ($units as $unit) {
+                                                    echo "<li>" . htmlspecialchars($unit['unit_code'] . ' - ' . $unit['unit_name']) . "</li>";
+                                                }
+                                                $stmt->close();
+                                                ?>
+                                            </ul>
+                                            <h5>Updated Coursework:</h5>
+                                            <ul class="unit-list">
+                                                <li>Unit Code: <?php echo htmlspecialchars($cw['unit_code'] ?? 'N/A'); ?> - Unit Name: <?php echo htmlspecialchars($cw['unit_name'] ?? 'N/A'); ?> - CAT 1: <?php echo htmlspecialchars($cw['cat1'] ?? 'N/A'); ?></li>
+                                            </ul>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="5">No coursework records found.</td></tr>
+                            <tr><td colspan="4">No coursework records found.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </section>
 
+            <!-- Exam Results Section -->
             <section id="examResultsSection" class="section">
                 <h2 class="section-title"><i class="fas fa-graduation-cap"></i> Exam Results</h2>
                 <table class="registration-table">
@@ -950,6 +1011,7 @@ $conn->close();
                 </table>
             </section>
 
+            <!-- Academic Leave Section -->
             <section id="academicLeaveSection" class="section">
                 <h2 class="section-title"><i class="fas fa-calendar-times"></i> Academic Leave</h2>
                 <form method="post" action="submit_academic_leave.php">
@@ -975,6 +1037,7 @@ $conn->close();
                 </form>
             </section>
 
+            <!-- Clearance Section -->
             <section id="clearanceSection" class="section">
                 <h2 class="section-title"><i class="fas fa-check-circle"></i> Clearance</h2>
                 <form method="post" action="submit_clearance.php">
@@ -988,17 +1051,20 @@ $conn->close();
                 </form>
             </section>
 
+            <!-- Survey Section -->
             <section id="surveySection" class="section">
                 <h2 class="section-title"><i class="fas fa-poll"></i> Student Survey</h2>
                 <p>Complete the survey for <?php echo $current_semester; ?>.</p>
                 <a href="submit_survey.php?semester=<?php echo urlencode($current_semester); ?>" class="submit-btn">Take Survey</a>
             </section>
 
+            <!-- Exam Audit Section -->
             <section id="examAuditSection" class="section">
                 <h2 class="section-title"><i class="fas fa-file-alt"></i> Exam Audit</h2>
                 <p>Exam audit functionality will be implemented soon.</p>
             </section>
 
+            <!-- Receipts Section -->
             <section id="receiptsSection" class="section">
                 <h2 class="section-title"><i class="fas fa-receipt"></i> Receipts</h2>
                 <?php if (empty($payments)): ?>
@@ -1029,54 +1095,56 @@ $conn->close();
                 <?php endif; ?>
             </section>
 
+            <!-- Fee Balance Section -->
             <section id="feeBalanceSection" class="section">
                 <h2 class="section-title"><i class="fas fa-wallet"></i> Fee Balance</h2>
                 <a href="generate_fee_statement.php" class="submit-btn">Download Fee Statement</a>
             </section>
 
-            <section id="selfServiceSection" class="section">
-                <h2 class="section-title"><i class="fas fa-cog"></i> Account Settings</h2>
-                <?php if ($password_success): ?>
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> <?php echo $password_success; ?>
-                    </div>
-                <?php endif; ?>
-                <?php if ($password_error): ?>
-                    <div class="alert alert-error">
-                        <i class="fas fa-exclamation-circle"></i> <?php echo $password_error; ?>
-                    </div>
-                <?php endif; ?>
-                <div class="profile-card" style="background: var(--card-bg); padding: 20px; border-radius: 10px;">
-                    <h3 class="section-title"><i class="fas fa-key"></i> Change Password</h3>
-                    <form method="post" action="" class="password-form">
-                        <div class="form-group">
-                            <label class="form-label" for="old_password">Current Password</label>
-                            <input type="password" class="form-input" id="old_password" name="old_password" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="new_password">New Password</label>
-                            <input type="password" class="form-input" id="new_password" name="new_password" required>
-                            <small style="color: var(--text); font-size: 0.9rem;">Must be at least 8 characters with uppercase, lowercase, and numbers</small>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="confirm_password">Confirm New Password</label>
-                            <input type="password" class="form-input" id="confirm_password" name="confirm_password" required>
-                        </div>
-                        <div class="submit-container" style="text-align: center;">
-                            <button type="submit" name="reset_password" class="submit-btn">
-                                <i class="fas fa-sync-alt"></i> Reset Password
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-        </main>
+            <!-- Self Service Section -->
+<section id="selfServiceSection" class="section">
+    <h2 class="section-title"><i class="fas fa-cog"></i> Account Settings</h2>
+    <?php if ($password_success): ?>
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> <?php echo $password_success; ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($password_error): ?>
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i> <?php echo $password_error; ?>
+        </div>
+    <?php endif; ?>
+    <div class="profile-card" style="background: var(--card-bg); padding: 20px; border-radius: 10px;">
+        <h3 class="section-title"><i class="fas fa-key"></i> Change Password</h3>
+        <form method="post" action="" class="password-form">
+            <div class="form-group">
+                <label class="form-label" for="old_password">Current Password</label>
+                <input type="password" class="form-input" id="old_password" name="old_password" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="new_password">New Password</label>
+                <input type="password" class="form-input" id="new_password" name="new_password" required>
+                <small style="color: var(--text); font-size: 0.9rem;">Must be at least 8 characters with uppercase, lowercase, and numbers</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm New Password</label>
+                <input type="password" class="form-input" id="confirm_password" name="confirm_password" required>
+            </div>
+            <div class="submit-container" style="text-align: center;">
+                <button type="submit" name="reset_password" class="submit-btn">
+                    <i class="fas fa-sync-alt"></i> Reset Password
+                </button>
+            </div>
+        </form>
     </div>
+</section>
 
     <script>
+        // Add event listeners for unit selection
         document.getElementById('availableUnitsSelect').addEventListener('dblclick', addUnit);
         document.getElementById('selectedUnitsSelect').addEventListener('dblclick', removeUnit);
 
+        // Update unit count display
         function updateUnitCount() {
             const selectedCount = document.getElementById('selectedUnitsSelect').options.length;
             document.getElementById('selectedCount').textContent = selectedCount;
@@ -1097,6 +1165,7 @@ $conn->close();
             }
         }
 
+        // Clear all selected units
         function clearSelection(event) {
             event.preventDefault();
             const selected = document.getElementById('selectedUnitsSelect');
@@ -1110,11 +1179,13 @@ $conn->close();
             updateAvailableCount();
         }
 
+        // Update available unit count
         function updateAvailableCount() {
             const availableCount = document.getElementById('availableUnitsSelect').options.length;
             document.getElementById('availableCount').textContent = availableCount;
         }
 
+        // Add unit from available to selected
         function addUnit(event) {
             event.preventDefault();
             const from = document.getElementById('availableUnitsSelect');
@@ -1132,6 +1203,7 @@ $conn->close();
             updateAvailableCount();
         }
 
+        // Remove unit from selected to available
         function removeUnit(event) {
             event.preventDefault();
             const from = document.getElementById('selectedUnitsSelect');
@@ -1149,11 +1221,13 @@ $conn->close();
             updateAvailableCount();
         }
 
+        // Initialize unit counts on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateUnitCount();
             updateAvailableCount();
         });
 
+        // Handle registration form submission
         document.getElementById('registrationForm').addEventListener('submit', function(e) {
             if (e.target.querySelector('[name="register_units"]')) {
                 const selected = document.getElementById('selectedUnitsSelect');
@@ -1167,6 +1241,7 @@ $conn->close();
             }
         });
 
+        // Show specific section based on click
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
@@ -1174,11 +1249,13 @@ $conn->close();
             document.querySelector(`[onclick*="showSection('${sectionId}')"]`)?.classList.add('active');
         }
 
+        // Toggle submenu visibility
         function toggleSubmenu(submenuId) {
             const submenu = document.getElementById(submenuId);
             submenu.classList.toggle('show');
         }
 
+        // Toggle registration dropdown
         function toggleRegistrationDropdown() {
             const dropdown = document.getElementById('registrationDropdown');
             if (!<?php echo $registration_disabled ? 'true' : 'false'; ?>) {
@@ -1186,20 +1263,30 @@ $conn->close();
             }
         }
 
+        // Show registration details
         function showRegistrationDetails(index) {
             const details = document.getElementById(`regDetails${index}`);
             details.style.display = details.style.display === 'none' ? 'table-row' : 'none';
         }
 
+        // Show registered units
         function showUnits(index) {
             const units = document.getElementById(`units${index}`);
             units.style.display = units.style.display === 'none' ? 'table-row' : 'none';
         }
 
+        // Toggle coursework details
+        function toggleCourseworkDetails(index) {
+            const details = document.getElementById(`courseworkDetails${index}`);
+            details.classList.toggle('show');
+        }
+
+        // Toggle sidebar on mobile
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('active');
         }
 
+        // Hide dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('registrationDropdown');
             const button = document.querySelector('.new-registration-btn');

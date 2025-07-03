@@ -13,12 +13,12 @@ if (!$conn) {
 
 $conn->begin_transaction();
 try {
-    $stmt = $conn->prepare("SELECT s.department, COUNT(s.student_id) as student_count, AVG(m.final_grade) as avg_grade 
-                           FROM students s 
-                           LEFT JOIN marks m ON s.student_id = m.student_id 
-                           LEFT JOIN enrollments e ON m.student_id = e.student_id AND m.unit_code = e.unit_code 
-                           WHERE s.department = 'Computer Science' AND e.semester = ? 
-                           GROUP BY s.department");
+    $stmt = $conn->prepare("SELECT s.course, COUNT(s.student_id) as student_count, AVG(er.final_grade) as avg_grade 
+                       FROM students s 
+                       LEFT JOIN exam_results er ON s.student_id = er.student_id 
+                       LEFT JOIN enrollments e ON er.student_id = e.student_id AND er.unit_code = e.unit_code 
+                       WHERE s.course = 'Computer Science' AND e.semester = ? 
+                       GROUP BY s.course");;
     $semester = '2025-S1';
     $stmt->bind_param("s", $semester);
     $stmt->execute();
