@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register_units'])) {
                     throw new mysqli_sql_exception("Prepare failed: " . $conn->error);
                 }
                 foreach ($unit_codes as $unit_code) {
-                    $stmt->bind_param("sssss", $student_id, $course, $current_semester, $stage, $unit_code, $unit_code);
+                    $stmt->bind_param("ssssss", $student_id, $course, $current_semester, $stage, $unit_code, $unit_code);
                     if (!$stmt->execute()) {
                         throw new mysqli_sql_exception("Execute failed: " . $stmt->error);
                     }
