@@ -49,6 +49,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $conn->close();
 ?>
+     <?php
+     -- Determine grade
+    if (condition) {
+        # code...
+    } total < 40 then
+        SET grade = 'E';
+    elseif total < 50 then
+        SET grade = 'D';
+    elseif total < 60 then
+        SET grade = 'C';
+    elseif total < 70 then
+        SET grade = 'B';
+    else {
+        # code...
+    }
+        SET grade = 'A';
+    end if;
+
+    -- Update final_grade
+    UPDATE marks
+    SET final_grade = $grade;
+    WHERE id = $mark_id;
+END$$
+
+DELIMITER ;
+
+?>
+
+
+
 <!DOCTYPE html>
 <html>
 <head>
