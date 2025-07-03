@@ -14,11 +14,12 @@ if (!$conn) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $student_id = $_POST['student_id'] ?? '';
     $unit_code = $_POST['unit_code'] ?? '';
+    $unit_title = $_POST['unit_title'] ??'';
     $cat1 = $_POST['cat1'] ?? 0;
 
     $conn->begin_transaction();
     try {
-        $stmt = $conn->prepare("SELECT version FROM marks WHERE student_id = ? AND unit_code = ? FOR UPDATE");
+        $stmt = $conn->prepare("SELECT version FROM marks WHERE student_id = ?,unit_title AND unit_code = ? FOR UPDATE");
         $stmt->bind_param("ss", $student_id, $unit_code);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -27,13 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $version = $mark ? $mark['version'] : -1;
         if ($mark) {
-            $stmt = $conn->prepare("UPDATE marks SET cat1 = ?, version = version + 1 WHERE student_id = ? AND unit_code = ? AND version = ?");
-            $stmt->bind_param("isii", $cat1, $student_id, $unit_code, $version);
+            $stmt = $conn->prepare("UPDATE marks SET cat1 = ?, version = version + 1 WHERE student_id = ? unit_title= ? AND unit_code = ? AND version = ?");
+            $stmt->bind_param("isii", $cat1, $student_id, $unit_title, $unit_code, $version);
             $success = $stmt->execute();
             if (!$success) throw new Exception("Version conflict, please try again.");
         } else {
-            $stmt = $conn->prepare("INSERT INTO marks (student_id, unit_code, cat1, version) VALUES (?, ?, ?, 0)");
-            $stmt->bind_param("ssi", $student_id, $unit_code, $cat1);
+            $stmt = $conn->prepare("INSERT INTO marks (student_id, unit_title, unit_code, cat1, version) VALUES (?, ?, ?, 0)");
+            $stmt->bind_param("ssi", $student_id,$unit_title, $unit_code, $cat1);
             $stmt->execute();
         }
         $stmt->close();
@@ -57,6 +58,7 @@ $conn->close();
     <h2>Update Marks</h2>
     <form method="POST">
         <input type="text" name="student_id" placeholder="Student ID" required>
+        <input type="text" name="unnit_title" placeholder="Unit Title" required>
         <input type="text" name="unit_code" placeholder="Unit Code" required>
         <input type="number" name="cat1" placeholder="CAT 1 Score" required>
         <button type="submit">Update</button>
