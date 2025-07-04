@@ -131,7 +131,37 @@ php
                 $main_exam = $_POST["main_exam"];
               }
               echo "<h3>Result for: <u>" . htmlspecialchars($name) . "</u></h3>";
-              
+
+    // Check for incomplete
+    if ($cat1 === "" || $cat2 === "" || $assignment === "" || $main_exam === "") {
+        echo "<strong>Grade: Incomplete</strong> (Missing one or more components)";
+    } else {
+        // Calculate average
+        $average = ($cat1 + $cat2 + $assignment + $main_exam) / 4;
+
+        // Determine grade
+        if ($average < 40) {
+            $grade = "Supplementary";
+        } elseif ($average <= 49) {
+            $grade = "D";
+        } elseif ($average <= 59) {
+            $grade = "C";
+        } elseif ($average <= 69) {
+            $grade = "B";
+        } else {
+            $grade = "A";
+        }
+
+        echo "CAT 1: $cat1<br>CAT 2: $cat2<br>Assignment: $assignment<br>Main Exam: $main_exam<br>";
+        echo "Average: <strong>$average</strong><br>";
+        echo "<strong>Grade: $grade</strong>";
+    }
+
+?>
+
+</body>
+</html>
+
         
      </body>
      </html>
