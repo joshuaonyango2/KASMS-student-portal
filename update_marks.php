@@ -77,8 +77,7 @@ DELIMITER ;
 
 ?>
 
-
-
+        
 <!DOCTYPE html>
 <html>
 <head>
@@ -95,3 +94,44 @@ DELIMITER ;
     </form>
 </body>
 </html>
+
+
+     php
+     <!DOCTYPE html>
+     <html lang="en">
+     <head>
+
+        <title>Students Marks and Grade</title>
+     </head>
+     <body>
+        <h2>Enter Students Marks</h2>
+        <form method="POST">
+            <label>Student Name:</label><br>
+            <input type="text" name="student_name" required>
+            <labelCAT 1:<label><br>
+            <input type="number" name="cat1" min="0" max="100"><br><br>
+
+    <label>CAT 2:</label><br>
+    <input type="number" name="cat2" min="0" max="100"><br><br>
+
+    <label>Assignment:</label><br>
+    <input type="number" name="assignment" min="0" max="100"><br><br>
+
+    <label>Main Exam:</label><br>
+    <input type="number" name="main_exam" min="0" max="100"><br><br>
+
+    <input type="submit" name="submit" value="Calculate Grade">
+</form>
+php
+              if ($_SERVER["REQUEST_METHOD"] == "POST") {
+                $name = $_POST["student_name"];
+                $cat1 = $_POST["cat1"];
+                $cat2 = $_POST["cat2"];
+                $assignment = $_POST["assignment"];
+                $main_exam = $_POST["main_exam"];
+              }
+              echo "<h3>Result for: <u>" . htmlspecialchars($name) . "</u></h3>";
+              
+        
+     </body>
+     </html>
