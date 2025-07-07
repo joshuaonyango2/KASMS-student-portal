@@ -70,7 +70,7 @@ try {
     <?php $conn->close(); ?>
 </body>
 </html>
-<?php
+<?
 <?php
 // Connect to database
 $conn = mysqli_connect("localhost", "root", "", "student_portal");
@@ -107,7 +107,8 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
     <li><?php echo $unit['unit_name']; ?> 
         <a href="delete_unit.php?id=<?php echo $unit['id']; ?>">[Remove]</a>
     </li>
-<?php } ?>
+    <?}
+    <?php
 </ul>
 
 <!-- Add a unit -->
@@ -121,8 +122,9 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
 <h3>👨‍🏫 Instructors</h3>
 <ul>
 <?php while ($inst = mysqli_fetch_assoc($instructors_query)) { ?>
-    <li><?php echo $inst['name'] . " - " . $inst['unit_name'] . " (" . $inst['email'] . ")"; ?></li>
-<?php } ?>
+    <li><?php echo $inst['name'] . " - " . $inst['unit_name'] . " (" . $inst['email'] . ")";</li>
+    <?
+<?php }
 </ul>
 
 <!-- Add a new instructor -->
@@ -137,7 +139,6 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
         while ($unit = mysqli_fetch_assoc($units_result)) {
             echo "<option value='{$unit['id']}'>{$unit['unit_name']}</option>";
         }
-        ?>
     </select>
     <input type="hidden" name="department" value="<?php echo $dept; ?>">
     <input type="submit" value="Add Instructor">
