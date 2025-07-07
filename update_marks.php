@@ -121,6 +121,23 @@ DELIMITER ;
 
     <input type="submit" name="submit" value="Calculate Grade">
 </form>
+<?php
+<label for="year">Year of Study:</label>
+<select name="year" id="year" required>
+    <option value="">-- Select Year --</option>
+    <option value="1">Year 1</option>
+    <option value="2">Year 2</option>
+    <option value="3">Year 3</option>
+</select>
+
+<label for="semester">Semester:</label>
+<select name="semester" id="semester" required>
+    <option value="">-- Select Semester --</option>
+    <option value="1">Semester 1</option>
+    <option value="2">Semester 2</option>
+</select>
+<?
+
 
 </body>
 </html>
