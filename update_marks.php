@@ -108,10 +108,6 @@ DELIMITER ;
         <form method="POST">
             <label>Student Name:</label><br>
             <input type="text" name="student_name" required>
-<<<<<<< HEAD
-            <label>CAT 1:<label><br>
-=======
->>>>>>> 1adc654322a6b104eb6941afb9870cca5c334e34
             <input type="number" name="cat1" min="0" max="100"><br><br>
 
     <label>CAT 2:</label><br>
@@ -129,6 +125,4 @@ DELIMITER ;
 </body>
 </html>
 
-        
-     </body>
-     </html>
+    
