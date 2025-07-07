@@ -141,5 +141,61 @@ DELIMITER ;
 
 </body>
 </html>
+<?php
+// Database connection
+$host = "localhost";
+$user = "root";
+$pass = "";
+$dbname = "student_portal";
+
+$conn = mysqli_connect($host, $user, $pass, $dbname);
+
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Form submission logic
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $student_id = $_POST['student_id'];
+    $year_semester = $_POST['year_semester'];
+
+    // Split the "Year X - Semester Y" into parts
+    $parts = explode(' - ', $year_semester);
+    $year = (int) filter_var($parts[0], FILTER_SANITIZE_NUMBER_INT);
+    $semester = (int) filter_var($parts[1], FILTER_SANITIZE_NUMBER_INT);
+
+    // Insert into the database
+    $sql = "INSERT INTO student_year_semester (student_id, year_of_study, semester)
+            VALUES ('$student_id', '$year', '$semester')";
+
+    if (mysqli_query($conn, $sql)) {
+        echo "✅ Data inserted successfully!";
+    } else {
+        echo "❌ Error: " . mysqli_error($conn);
+    }
+}
+?>
+
+<!-- HTML Form -->
+<form method="POST" action="">
+    <label for="student_id">Student ID:</label>
+    <input type="text" name="student_id" required><br><br>
+
+    <label for="year_semester">Year and Semester:</label>
+    <select name="year_semester" id="year_semester" required>
+        <option value="">-- Select Year & Semester --</option>
+        <?php
+        for ($year = 1; $year <= 3; $year++) {
+            for ($sem = 1; $sem <= 2; $sem++) {
+                $option = "Year $year - Semester $sem";
+                echo "<option value='$option'>$option</option>";
+            }
+        }
+        ?>
+    </select><br><br>
+
+    <input type="submit" value="Submit">
+</form>
+
 
     
