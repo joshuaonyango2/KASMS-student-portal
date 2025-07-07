@@ -1,3 +1,236 @@
+<?php
+require_once 'session_handler.php';
+requireLogin('admin');
+
+$conn = new mysqli("localhost", "root", "0000", "kasms_db");
+if ($conn->connect_error) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
+$stmt = $conn->prepare("SELECT * FROM user_details WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user_details = $result->fetch_assoc();
+$stmt->close();
+
+// Handle all POST requests in a centralized way
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+
+    // Profile update
+    if (isset($_POST['save_profile'])) {
+        $name = trim($_POST['name']);
+        $id_number = trim($_POST['id_number']);
+        $gender = trim($_POST['gender']);
+        $phone = trim($_POST['phone']);
+        $email = trim($_POST['email']);
+        $designation = trim($_POST['designation']);
+
+        $query = "UPDATE user_details SET name=?, id_number=?, gender=?, phone=?, email=?, designation=? WHERE user_id=?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ssssssi", $name, $id_number, $gender, $phone, $email, $designation, $user_id);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    // Add new user
+    if (isset($_POST['save_user'])) {
+        $username = trim($_POST['username']);
+        $password = trim($_POST['password']);
+        $encrypted_password = password_hash($password, PASSWORD_BCRYPT);
+        $role = trim($_POST['role']);
+        $name = trim($_POST['name']);
+        $id_number = trim($_POST['id_number']);
+        $gender = trim($_POST['gender']);
+        $phone = trim($_POST['phone']);
+        $email = trim($_POST['email']);
+        $designation = trim($_POST['designation']);
+
+        $conn->begin_transaction();
+        try {
+            $query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("sss", $username, $encrypted_password, $role);
+            $stmt->execute();
+            $new_user_id = $conn->insert_id;
+
+            $query = "INSERT INTO user_details (user_id, name, id_number, gender, phone, email, designation) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("issssss", $new_user_id, $name, $id_number, $gender, $phone, $email, $designation);
+            $stmt->execute();
+            $conn->commit();
+            
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        $stmt->close();
+        exit;
+    }
+
+    // Update user
+    if (isset($_POST['update_user'])) {
+        $id = intval($_POST['id']);
+        $username = trim($_POST['username']);
+        $password = trim($_POST['password']);
+        $encrypted_password = !empty($password) ? password_hash($password, PASSWORD_BCRYPT) : $_POST['current_password'];
+        $role = trim($_POST['role']);
+        $name = trim($_POST['name'] ?? '');
+        $id_number = trim($_POST['id_number'] ?? '');
+        $gender = trim($_POST['gender'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $designation = trim($_POST['designation'] ?? '');
+
+        $conn->begin_transaction();
+        try {
+            $query = "UPDATE users SET username=?, password=?, role=? WHERE id=?";
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("sssi", $username, $encrypted_password, $role, $id);
+            $success = $stmt->execute();
+            error_log("Users update query: $query, ID: $id, Success: $success");
+
+            $result = $conn->query("SELECT * FROM user_details WHERE user_id = " . $conn->real_escape_string($id));
+            if ($result->num_rows == 0 && (!empty($name) || !empty($id_number) || !empty($gender) || !empty($phone) || !empty($email) || !empty($designation))) {
+                $query = "INSERT INTO user_details (user_id, name, id_number, gender, phone, email, designation) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("issssss", $id, $name, $id_number, $gender, $phone, $email, $designation);
+            } elseif ($result->num_rows > 0) {
+                $query = "UPDATE user_details SET name=?, id_number=?, gender=?, phone=?, email=?, designation=? WHERE user_id=?";
+                $stmt = $conn->prepare($query);
+                $stmt->bind_param("ssssssi", $name, $id_number, $gender, $phone, $email, $designation, $id);
+            }
+            if (isset($stmt)) {
+                $success = $success && $stmt->execute();
+                error_log("User_details query: $query, User_ID: $id, Success: $success");
+            }
+            $conn->commit();
+            
+            echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        } catch (Exception $e) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        $stmt->close();
+        exit;
+    }
+
+    // Delete user
+    if (isset($_POST['delete_user'])) {
+        $id = $_POST['id'];
+        $query = "DELETE FROM users WHERE id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $id);
+        $success = $stmt->execute();
+        
+        $query = "DELETE FROM user_details WHERE user_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $id);
+        $success = $success && $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    // Handle course, unit, student management (similarly ensure JSON response and exit)
+    if (isset($_POST['save_course'])) {
+        $course_id = trim($_POST['course_id']);
+        $course = trim($_POST['course']);
+        $department = trim($_POST['department']);
+
+        $query = "INSERT INTO courses (course_id, course, department) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE course=?, department=?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("sssss", $course_id, $course, $department, $course, $department);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    if (isset($_POST['delete_course'])) {
+        $course_id = $_POST['course_id'];
+        $query = "DELETE FROM courses WHERE course_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $course_id);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    if (isset($_POST['save_unit'])) {
+        $unit_code = trim($_POST['unit_code']);
+        $unit_name = trim($_POST['unit_name']);
+        $course = trim($_POST['course']);
+        $credits = trim($_POST['credits']);
+
+        $query = "INSERT INTO units (unit_code, unit_name, course, credits) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE unit_name=?, course=?, credits=?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("sssdsds", $unit_code, $unit_name, $course, $credits, $unit_name, $course, $credits);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    if (isset($_POST['delete_unit'])) {
+        $unit_code = $_POST['unit_code'];
+        $query = "DELETE FROM units WHERE unit_code = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $unit_code);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    if (isset($_POST['save_student'])) {
+        $student_id = trim($_POST['student_id']);
+        $name = trim($_POST['name']);
+        $course = trim($_POST['course']);
+        $email_address = trim($_POST['email_address']);
+
+        $query = "INSERT INTO students (student_id, name, course, email_address) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, course=?, email_address=?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("sssssss", $student_id, $name, $course, $email_address, $name, $course, $email_address);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    if (isset($_POST['delete_student'])) {
+        $student_id = $_POST['student_id'];
+        $query = "DELETE FROM students WHERE student_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("s", $student_id);
+        $success = $stmt->execute();
+        
+        echo json_encode(['success' => $success, 'error' => $success ? '' : $stmt->error]);
+        $stmt->close();
+        exit;
+    }
+
+    // Default response for unhandled requests
+    echo json_encode(['success' => false, 'error' => 'Invalid request']);
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,154 +350,6 @@
     </style>
 </head>
 <body>
-<?php
-require_once 'session_handler.php';
-requireLogin('admin');
-
-$conn = new mysqli("localhost", "root", "0000", "kasms_db");
-if ($conn->connect_error) {
-    error_log("Database connection failed: " . $conn->connect_error);
-    die("Connection failed. Please try again later.");
-}
-
-$user_id = $_SESSION['user_id'];
-$result = $conn->query("SELECT * FROM user_details WHERE user_id = $user_id");
-$user_details = $result->fetch_assoc();
-
-// Handle profile update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
-    $name = $conn->real_escape_string(trim($_POST['name']));
-    $id_number = $conn->real_escape_string(trim($_POST['id_number']));
-    $gender = $conn->real_escape_string(trim($_POST['gender']));
-    $phone = $conn->real_escape_string(trim($_POST['phone']));
-    $email = $conn->real_escape_string(trim($_POST['email']));
-    $designation = $conn->real_escape_string(trim($_POST['designation']));
-
-    $query = "UPDATE user_details SET name='$name', id_number='$id_number', gender='$gender', phone='$phone', email='$email', designation='$designation' WHERE user_id=$user_id";
-    if ($conn->query($query)) {
-        $result = $conn->query("SELECT * FROM user_details WHERE user_id = $user_id");
-        $user_details = $result->fetch_assoc();
-    }
-}
-
-// Handle adding a new user with details
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user'])) {
-    $username = $conn->real_escape_string(trim($_POST['username']));
-    $password = password_hash(trim($_POST['password']), PASSWORD_BCRYPT);
-    $role = $conn->real_escape_string(trim($_POST['role']));
-    $name = $conn->real_escape_string(trim($_POST['name']));
-    $id_number = $conn->real_escape_string(trim($_POST['id_number']));
-    $gender = $conn->real_escape_string(trim($_POST['gender']));
-    $phone = $conn->real_escape_string(trim($_POST['phone']));
-    $email = $conn->real_escape_string(trim($_POST['email']));
-    $designation = $conn->real_escape_string(trim($_POST['designation']));
-
-    $conn->begin_transaction();
-    try {
-        // Insert into users table
-        $query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("sss", $username, $password, $role);
-        $stmt->execute();
-        $new_user_id = $conn->insert_id;
-        error_log("Inserted user ID: $new_user_id");
-
-        // Insert into user_details table
-        $query = "INSERT INTO user_details (user_id, name, id_number, gender, phone, email, designation) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("issssss", $new_user_id, $name, $id_number, $gender, $phone, $email, $designation);
-        if (!$stmt->execute()) {
-            error_log("User details insert failed: " . $stmt->error . " Query: " . $query);
-            throw new Exception("Insert failed: " . $stmt->error);
-        }
-        $conn->commit();
-        error_log("New user added successfully: $username");
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log("Failed to add user: " . $e->getMessage());
-    }
-    $stmt->close();
-}
-
-// Handle user update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
-    $id = $conn->real_escape_string($_POST['id']);
-    $username = $conn->real_escape_string(trim($_POST['username']));
-    $password = !empty(trim($_POST['password'])) ? password_hash(trim($_POST['password']), PASSWORD_BCRYPT) : $_POST['current_password'];
-    $role = $conn->real_escape_string(trim($_POST['role']));
-    $query = "UPDATE users SET username='$username', password='$password', role='$role' WHERE id=$id";
-    $conn->query($query);
-
-    // Check if user_details exists, update or insert accordingly
-    $result = $conn->query("SELECT * FROM user_details WHERE user_id = $id");
-    if (!empty($_POST['name']) || $result->num_rows == 0) {
-        $name = $conn->real_escape_string(trim($_POST['name'] ?? ''));
-        $id_number = $conn->real_escape_string(trim($_POST['id_number'] ?? ''));
-        $gender = $conn->real_escape_string(trim($_POST['gender'] ?? ''));
-        $phone = $conn->real_escape_string(trim($_POST['phone'] ?? ''));
-        $email = $conn->real_escape_string(trim($_POST['email'] ?? ''));
-        $designation = $conn->real_escape_string(trim($_POST['designation'] ?? ''));
-
-        if ($result->num_rows == 0) {
-            $query = "INSERT INTO user_details (user_id, name, id_number, gender, phone, email, designation) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param("issssss", $id, $name, $id_number, $gender, $phone, $email, $designation);
-        } else {
-            $query = "UPDATE user_details SET name=?, id_number=?, gender=?, phone=?, email=?, designation=? WHERE user_id=?";
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param("ssssssi", $name, $id_number, $gender, $phone, $email, $designation, $id);
-        }
-        if (!$stmt->execute()) {
-            error_log("User details update/insert failed: " . $stmt->error . " Query: " . $query);
-        }
-        $stmt->close();
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
-    $id = $conn->real_escape_string($_POST['id']);
-    $conn->query("DELETE FROM users WHERE id=$id");
-    $conn->query("DELETE FROM user_details WHERE user_id=$id");
-}
-
-// Handle course management
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_course'])) {
-    $course_id = $conn->real_escape_string(trim($_POST['course_id']));
-    $course_name = $conn->real_escape_string(trim($_POST['course_name']));
-    $description = $conn->real_escape_string(trim($_POST['description']));
-
-    $query = "INSERT INTO courses (course_id, course_name, description) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE course_name=?, description=?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("isssi", $course_id, $course_name, $description, $course_name, $description);
-    $stmt->execute();
-    $stmt->close();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_course'])) {
-    $course_id = $conn->real_escape_string($_POST['course_id']);
-    $conn->query("DELETE FROM courses WHERE course_id='$course_id'");
-}
-
-// Handle unit management
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_unit'])) {
-    $unit_id = $conn->real_escape_string(trim($_POST['unit_id']));
-    $unit_name = $conn->real_escape_string(trim($_POST['unit_name']));
-    $course_id = $conn->real_escape_string(trim($_POST['course_id']));
-    $description = $conn->real_escape_string(trim($_POST['description']));
-
-    $query = "INSERT INTO units (unit_id, unit_name, course_id, description) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE unit_name=?, course_id=?, description=?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("sisssi", $unit_id, $unit_name, $course_id, $description, $unit_name, $course_id, $description);
-    $stmt->execute();
-    $stmt->close();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
-    $unit_id = $conn->real_escape_string($_POST['unit_id']);
-    $conn->query("DELETE FROM units WHERE unit_id='$unit_id'");
-}
-?>
-
 <div class="container">
     <div class="sidebar">
         <h2>Admin Dashboard</h2>
@@ -274,6 +359,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
             <li><a href="#students" onclick="showSection('students')">Manage Students</a></li>
             <li><a href="#courses" onclick="showSection('courses')">Manage Courses</a></li>
             <li><a href="#units" onclick="showSection('units')">Manage Units</a></li>
+            <li><a href="#instructors" onclick="showSection('instructors')">Manage Instructors</a></li>
             <li><a href="#fees" onclick="showSection('fees')">Manage Fees</a></li>
             <li><a href="#registrations" onclick="showSection('registrations')">Manage Registrations</a></li>
             <li><a href="logout.php">Logout</a></li>
@@ -322,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                     <tr>
                         <th>ID</th>
                         <th>Username</th>
-                        <th>Password Hash</th>
+                        <th>Password</th>
                         <th>Role</th>
                         <th>Name</th>
                         <th>ID Number</th>
@@ -340,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                         echo "<tr>
                             <td>" . htmlspecialchars($row['id']) . "</td>
                             <td>" . htmlspecialchars($row['username']) . "</td>
-                            <td>" . htmlspecialchars($row['password']) . "</td>
+                            <td>********</td>
                             <td>" . htmlspecialchars($row['role']) . "</td>
                             <td>" . htmlspecialchars($row['name'] ?? '') . "</td>
                             <td>" . htmlspecialchars($row['id_number'] ?? '') . "</td>
@@ -349,8 +435,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                             <td>" . htmlspecialchars($row['email'] ?? '') . "</td>
                             <td>" . htmlspecialchars($row['designation'] ?? '') . "</td>
                             <td>
-                                <button class='btn' onclick='showEditForm(\"users\", \"id\", \"" . htmlspecialchars($row['id']) . "\")'>Edit</button>
-                                <button class='btn' onclick='deleteRecord(\"users\", \"id\", \"" . htmlspecialchars($row['id']) . "\")'>Delete</button>
+                                <button class='btn' onclick='showEditForm(\"users\", \"id\", " . intval($row['id']) . ")'>Edit</button>
+                                <button class='btn' onclick='deleteRecord(\"users\", \"id\", " . intval($row['id']) . ")'>Delete</button>
                             </td>
                         </tr>";
                     }
@@ -399,8 +485,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                 <thead>
                     <tr>
                         <th>Course ID</th>
-                        <th>Course Name</th>
-                        <th>Description</th>
+                        <th>Course</th>
+                        <th>Department</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -410,8 +496,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                     while ($row = $result->fetch_assoc()) {
                         echo "<tr>
                             <td>" . htmlspecialchars($row['course_id']) . "</td>
-                            <td>" . htmlspecialchars($row['course_name']) . "</td>
-                            <td>" . htmlspecialchars($row['description']) . "</td>
+                            <td>" . htmlspecialchars($row['course']) . "</td>
+                            <td>" . htmlspecialchars($row['department']) . "</td>
                             <td>
                                 <button class='btn' onclick='showEditForm(\"courses\", \"course_id\", \"" . htmlspecialchars($row['course_id']) . "\")'>Edit</button>
                                 <button class='btn' onclick='deleteRecord(\"courses\", \"course_id\", \"" . htmlspecialchars($row['course_id']) . "\")'>Delete</button>
@@ -425,14 +511,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
 
         <div class="card" id="units" style="display: none;">
             <h2>Manage Units</h2>
-            <button class="btn" onclick="showAddForm('units', 'unit_id')">Add Unit</button>
+            <button class="btn" onclick="showAddForm('units', 'unit_code')">Add Unit</button>
             <table>
                 <thead>
                     <tr>
-                        <th>Unit ID</th>
+                        <th>Unit Code</th>
                         <th>Unit Name</th>
-                        <th>Course ID</th>
-                        <th>Description</th>
+                        <th>Course</th>
+                        <th>Credits</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -441,13 +527,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
                     $result = $conn->query("SELECT * FROM units");
                     while ($row = $result->fetch_assoc()) {
                         echo "<tr>
-                            <td>" . htmlspecialchars($row['unit_id']) . "</td>
+                            <td>" . htmlspecialchars($row['unit_code']) . "</td>
                             <td>" . htmlspecialchars($row['unit_name']) . "</td>
-                            <td>" . htmlspecialchars($row['course_id']) . "</td>
-                            <td>" . htmlspecialchars($row['description']) . "</td>
+                            <td>" . htmlspecialchars($row['course']) . "</td>
+                            <td>" . htmlspecialchars($row['credits']) . "</td>
                             <td>
-                                <button class='btn' onclick='showEditForm(\"units\", \"unit_id\", \"" . htmlspecialchars($row['unit_id']) . "\")'>Edit</button>
-                                <button class='btn' onclick='deleteRecord(\"units\", \"unit_id\", \"" . htmlspecialchars($row['unit_id']) . "\")'>Delete</button>
+                                <button class='btn' onclick='showEditForm(\"units\", \"unit_code\", \"" . htmlspecialchars($row['unit_code']) . "\")'>Edit</button>
+                                <button class='btn' onclick='deleteRecord(\"units\", \"unit_code\", \"" . htmlspecialchars($row['unit_code']) . "\")'>Delete</button>
+                            </td>
+                        </tr>";
+                    }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" id="instructors" style="display: none;">
+            <h2>Manage Instructors</h2>
+            <button class="btn" onclick="showAddForm('instructors', 'id')">Add Instructor</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>ID Number</th>
+                        <th>Gender</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Designation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $result = $conn->query("SELECT ud.* FROM user_details ud JOIN users u ON ud.user_id = u.id WHERE u.role = 'instructor'");
+                    while ($row = $result->fetch_assoc()) {
+                        echo "<tr>
+                            <td>" . htmlspecialchars($row['user_id']) . "</td>
+                            <td>" . htmlspecialchars($row['name']) . "</td>
+                            <td>" . htmlspecialchars($row['id_number']) . "</td>
+                            <td>" . htmlspecialchars($row['gender']) . "</td>
+                            <td>" . htmlspecialchars($row['phone']) . "</td>
+                            <td>" . htmlspecialchars($row['email']) . "</td>
+                            <td>" . htmlspecialchars($row['designation']) . "</td>
+                            <td>
+                                <button class='btn' onclick='showEditForm(\"instructors\", \"id\", \"" . htmlspecialchars($row['user_id']) . "\")'>Edit</button>
+                                <button class='btn' onclick='deleteRecord(\"instructors\", \"id\", \"" . htmlspecialchars($row['user_id']) . "\")'>Delete</button>
                             </td>
                         </tr>";
                     }
@@ -470,82 +595,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_unit'])) {
             <div class="modal-content">
                 <h2>Edit Record</h2>
                 <form id="editForm" method="POST" action="">
-                    <input type="hidden" id="edit_table" name="table">
-                    <input type="hidden" id="edit_id" name="id">
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username">
-                    </div>
-                    <div class="form-group">
-                        <label for="password">New Password (leave blank to keep current)</label>
-                        <input type="password" id="password" name="password">
-                        <input type="hidden" id="current_password" name="current_password">
-                    </div>
-                    <div class="form-group">
-                        <label for="role">Role</label>
-                        <select id="role" name="role">
-                            <option value="admin">Admin</option>
-                            <option value="student">Student</option>
-                            <option value="instructor">Instructor</option>
-                            <option value="hod">HOD</option>
-                            <option value="finance">Finance</option>
-                            <option value="registrar">Registrar</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="name">Full Name</label>
-                        <input type="text" id="name" name="name">
-                    </div>
-                    <div class="form-group">
-                        <label for="id_number">ID Number</label>
-                        <input type="text" id="id_number" name="id_number">
-                    </div>
-                    <div class="form-group">
-                        <label for="gender">Gender</label>
-                        <select id="gender" name="gender">
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Phone Number</label>
-                        <input type="text" id="phone" name="phone">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="designation">Designation</label>
-                        <input type="text" id="designation" name="designation">
-                    </div>
-                    <div class="form-group">
-                        <label for="course_id">Course ID</label>
-                        <input type="text" id="course_id" name="course_id">
-                    </div>
-                    <div class="form-group">
-                        <label for="course_name">Course Name</label>
-                        <input type="text" id="course_name" name="course_name">
-                    </div>
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" name="description"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="unit_id">Unit ID</label>
-                        <input type="text" id="unit_id" name="unit_id">
-                    </div>
-                    <div class="form-group">
-                        <label for="unit_name">Unit Name</label>
-                        <input type="text" id="unit_name" name="unit_name">
-                    </div>
-                    <div class="form-group">
-                        <label for="unit_course_id">Course ID</label>
-                        <input type="text" id="unit_course_id" name="course_id">
-                    </div>
-                    <button type="submit" name="update_user" class="btn">Save Changes</button>
-                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                    <!-- Form fields populated by JavaScript -->
                 </form>
             </div>
         </div>
@@ -596,11 +646,13 @@ function showEditProfile() {
         </form>
     `;
 }
-
 function showAddForm(table, idField) {
     const form = document.getElementById('editForm');
     form.innerHTML = `<input type="hidden" id="edit_table" name="table" value="${table}">`;
-    if (table === 'users') {
+    let action = '';
+
+    if (table === 'users' || table === 'instructors') {
+        action = 'save_user';
         form.innerHTML += `
             <div class="form-group">
                 <label for="username">Username</label>
@@ -615,7 +667,7 @@ function showAddForm(table, idField) {
                 <select id="role" name="role" required>
                     <option value="admin">Admin</option>
                     <option value="student">Student</option>
-                    <option value="instructor">Instructor</option>
+                    <option value="instructor" ${table === 'instructors' ? 'selected' : ''}>Instructor</option>
                     <option value="hod">HOD</option>
                     <option value="finance">Finance</option>
                     <option value="registrar">Registrar</option>
@@ -650,8 +702,8 @@ function showAddForm(table, idField) {
                 <input type="text" id="designation" name="designation" required>
             </div>
         `;
-        form.innerHTML += `<button type="submit" name="save_user" class="btn">Save Changes</button>`;
     } else if (table === 'students') {
+        action = 'save_student';
         form.innerHTML += `
             <div class="form-group">
                 <label for="student_id">Student ID</label>
@@ -666,59 +718,74 @@ function showAddForm(table, idField) {
                 <input type="text" id="course" name="course" required>
             </div>
             <div class="form-group">
-                <label for="email_address">Email</label>
+                <label for="email_address">Email Address</label>
                 <input type="email" id="email_address" name="email_address" required>
             </div>
         `;
-        form.innerHTML += `<button type="submit" name="save_user" class="btn">Save Changes</button>`;
     } else if (table === 'courses') {
+        action = 'save_course';
         form.innerHTML += `
             <div class="form-group">
                 <label for="course_id">Course ID</label>
                 <input type="text" id="course_id" name="course_id" required>
             </div>
             <div class="form-group">
-                <label for="course_name">Course Name</label>
-                <input type="text" id="course_name" name="course_name" required>
+                <label for="course">Course</label>
+                <input type="text" id="course" name="course" required>
             </div>
             <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" required></textarea>
+                <label for="department">Department</label>
+                <input type="text" id="department" name="department" required>
             </div>
         `;
-        form.innerHTML += `<button type="submit" name="save_course" class="btn">Save Changes</button>`;
     } else if (table === 'units') {
+        action = 'save_unit';
         form.innerHTML += `
             <div class="form-group">
-                <label for="unit_id">Unit ID</label>
-                <input type="text" id="unit_id" name="unit_id" required>
+                <label for="unit_code">Unit Code</label>
+                <input type="text" id="unit_code" name="unit_code" required>
             </div>
             <div class="form-group">
                 <label for="unit_name">Unit Name</label>
                 <input type="text" id="unit_name" name="unit_name" required>
             </div>
             <div class="form-group">
-                <label for="unit_course_id">Course ID</label>
-                <input type="text" id="unit_course_id" name="course_id" required>
+                <label for="course">Course</label>
+                <input type="text" id="course" name="course" required>
             </div>
             <div class="form-group">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" required></textarea>
+                <label for="credits">Credits</label>
+                <input type="number" id="credits" name="credits" step="0.5" required>
             </div>
         `;
-        form.innerHTML += `<button type="submit" name="save_unit" class="btn">Save Changes</button>`;
     }
+    form.innerHTML += `<button type="submit" name="${action}" class="btn">Save Changes</button>`;
     form.innerHTML += `<button type="button" class="btn" onclick="closeModal()">Cancel</button>`;
     document.getElementById('editModal').style.display = 'block';
 }
 
 function showEditForm(table, idField, id) {
+    console.log('Fetching record for table:', table, 'idField:', idField, 'id:', id);
     fetch(`get_record.php?table=${table}&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(jsonData => {
+            if (!jsonData.success) {
+                alert('Error fetching record: ' + (jsonData.error || 'Unknown error'));
+                return;
+            }
+            const data = jsonData.data || {};
             const form = document.getElementById('editForm');
-            form.innerHTML = `<input type="hidden" id="edit_table" name="table" value="${table}"><input type="hidden" id="edit_id" name="id" value="${id}">`;
-            if (table === 'users') {
+            form.innerHTML = `<input type="hidden" id="edit_table" name="table" value="${table}">
+                            <input type="hidden" id="edit_id" name="${idField}" value="${id}">`;
+            let action = '';
+
+            if (table === 'users' || table === 'instructors') {
+                action = 'update_user';
                 form.innerHTML += `
                     <div class="form-group">
                         <label for="username">Username</label>
@@ -769,12 +836,12 @@ function showEditForm(table, idField, id) {
                         <input type="text" id="designation" name="designation" value="${data.designation || ''}">
                     </div>
                 `;
-                form.innerHTML += `<button type="submit" name="update_user" class="btn">Save Changes</button>`;
             } else if (table === 'students') {
+                action = 'save_student';
                 form.innerHTML += `
                     <div class="form-group">
                         <label for="student_id">Student ID</label>
-                        <input type="text" id="student_id" name="student_id" value="${data.student_id || ''}" required>
+                        <input type="text" id="student_id" name="student_id" value="${data.student_id || ''}" required readonly>
                     </div>
                     <div class="form-group">
                         <label for="name">Name</label>
@@ -785,95 +852,58 @@ function showEditForm(table, idField, id) {
                         <input type="text" id="course" name="course" value="${data.course || ''}" required>
                     </div>
                     <div class="form-group">
-                        <label for="email_address">Email</label>
+                        <label for="email_address">Email Address</label>
                         <input type="email" id="email_address" name="email_address" value="${data.email_address || ''}" required>
                     </div>
                 `;
-                form.innerHTML += `<button type="submit" name="update_user" class="btn">Save Changes</button>`;
             } else if (table === 'courses') {
+                action = 'save_course';
                 form.innerHTML += `
                     <div class="form-group">
                         <label for="course_id">Course ID</label>
-                        <input type="text" id="course_id" name="course_id" value="${data.course_id || ''}" required>
+                        <input type="text" id="course_id" name="course_id" value="${data.course_id || ''}" required readonly>
                     </div>
                     <div class="form-group">
-                        <label for="course_name">Course Name</label>
-                        <input type="text" id="course_name" name="course_name" value="${data.course_name || ''}" required>
+                        <label for="course">Course</label>
+                        <input type="text" id="course" name="course" value="${data.course || ''}" required>
                     </div>
                     <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" name="description" required>${data.description || ''}</textarea>
+                        <label for="department">Department</label>
+                        <input type="text" id="department" name="department" value="${data.department || ''}" required>
                     </div>
                 `;
-                form.innerHTML += `<button type="submit" name="save_course" class="btn">Save Changes</button>`;
             } else if (table === 'units') {
+                action = 'save_unit';
                 form.innerHTML += `
                     <div class="form-group">
-                        <label for="unit_id">Unit ID</label>
-                        <input type="text" id="unit_id" name="unit_id" value="${data.unit_id || ''}" required>
+                        <label for="unit_code">Unit Code</label>
+                        <input type="text" id="unit_code" name="unit_code" value="${data.unit_code || ''}" required readonly>
                     </div>
                     <div class="form-group">
                         <label for="unit_name">Unit Name</label>
                         <input type="text" id="unit_name" name="unit_name" value="${data.unit_name || ''}" required>
                     </div>
                     <div class="form-group">
-                        <label for="unit_course_id">Course ID</label>
-                        <input type="text" id="unit_course_id" name="course_id" value="${data.course_id || ''}" required>
+                        <label for="course">Course</label>
+                        <input type="text" id="course" name="course" value="${data.course || ''}" required>
                     </div>
                     <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" name="description" required>${data.description || ''}</textarea>
+                        <label for="credits">Credits</label>
+                        <input type="number" id="credits" name="credits" value="${data.credits || ''}" step="0.5" required>
                     </div>
                 `;
-                form.innerHTML += `<button type="submit" name="save_unit" class="btn">Save Changes</button>`;
             }
+            form.innerHTML += `<button type="submit" name="${action}" class="btn">Save Changes</button>`;
             form.innerHTML += `<button type="button" class="btn" onclick="closeModal()">Cancel</button>`;
             document.getElementById('editModal').style.display = 'block';
-        });
-}
-
-function deleteRecord(table, idField, id) {
-    if (confirm('Are you sure you want to delete this record?')) {
-        const formData = new FormData();
-        formData.append('table', table);
-        formData.append('idField', idField);
-        formData.append('id', id);
-        fetch('delete_record.php', {
-            method: 'POST',
-            body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error deleting record: ' + data.error);
-            }
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Error fetching record: ' + error.message);
         });
-    }
 }
-
-function closeModal() {
-    document.getElementById('editModal').style.display = 'none';
-}
-
-document.getElementById('editForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    fetch('', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Error updating record: ' + data.error);
-        }
-    });
-});
 </script>
 
 <?php $conn->close(); ?>
+</body>
 </html>
