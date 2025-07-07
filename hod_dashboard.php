@@ -1,6 +1,6 @@
 <?php
 require_once 'session_handler.php';
-initializeSessionHandler();
+'initializeSessionHandler'();
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'hod') {
     header("Location: index.php");
     exit();
