@@ -96,12 +96,12 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
 
 <h2>Welcome, <?php echo $hod['name']; ?> (<?php echo $hod['department']; ?> Department)</h2>
 
-<h3>📌 Personal Details</h3>
+<h3> Personal Details</h3>
 <p><strong>Email:</strong> <?php echo $hod['email']; ?></p>
 
-<h3>👥 Students Enrolled: <?php echo $student_count; ?></h3>
+<h3> Students Enrolled: <?php echo $student_count; ?></h3>
 
-<h3>📘 Units Under Your Department</h3>
+<h3> Units Under Your Department</h3>
 <ul>
 <?php while ($unit = mysqli_fetch_assoc($units_query)) { ?>
     <li><?php echo $unit['unit_name']; ?> 
@@ -118,7 +118,7 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
     <input type="submit" value="Add Unit">
 </form>
 
-<h3>👨‍🏫 Instructors</h3>
+<h3> Instructors</h3>
 <ul>
 <?php while ($inst = mysqli_fetch_assoc($instructors_query)) { ?>
     <li><?php echo $inst['name'] . " - " . $inst['unit_name'] . " (" . $inst['email'] . ")"; ?></li>
