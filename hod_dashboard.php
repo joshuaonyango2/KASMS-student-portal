@@ -70,3 +70,79 @@ try {
     <?php $conn->close(); ?>
 </body>
 </html>
+<?php
+<?php
+// Connect to database
+$conn = mysqli_connect("localhost", "root", "", "student_portal");
+
+$hod_id = 1; // HOD ID (hardcoded for demo)
+
+// Get HOD details
+$hod_query = mysqli_query($conn, "SELECT * FROM hod WHERE id = $hod_id");
+$hod = mysqli_fetch_assoc($hod_query);
+$dept = $hod['department'];
+
+// Count students in HOD's department
+$student_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM students WHERE department = '$dept'");
+$student_count = mysqli_fetch_assoc($student_query)['total'];
+
+// Fetch units in the department
+$units_query = mysqli_query($conn, "SELECT * FROM units WHERE department = '$dept'");
+
+// Fetch instructors in the department
+$instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name FROM instructors 
+    JOIN units ON instructors.unit_id = units.id WHERE instructors.department = '$dept'");
+?>
+
+<h2>Welcome, <?php echo $hod['name']; ?> (<?php echo $hod['department']; ?> Department)</h2>
+
+<h3>📌 Personal Details</h3>
+<p><strong>Email:</strong> <?php echo $hod['email']; ?></p>
+
+<h3>👥 Students Enrolled: <?php echo $student_count; ?></h3>
+
+<h3>📘 Units Under Your Department</h3>
+<ul>
+<?php while ($unit = mysqli_fetch_assoc($units_query)) { ?>
+    <li><?php echo $unit['unit_name']; ?> 
+        <a href="delete_unit.php?id=<?php echo $unit['id']; ?>">[Remove]</a>
+    </li>
+<?php } ?>
+</ul>
+
+<!-- Add a unit -->
+<h4>Add a New Unit</h4>
+<form method="POST" action="add_unit.php">
+    <input type="text" name="unit_name" placeholder="Unit Name" required>
+    <input type="hidden" name="department" value="<?php echo $dept; ?>">
+    <input type="submit" value="Add Unit">
+</form>
+
+<h3>👨‍🏫 Instructors</h3>
+<ul>
+<?php while ($inst = mysqli_fetch_assoc($instructors_query)) { ?>
+    <li><?php echo $inst['name'] . " - " . $inst['unit_name'] . " (" . $inst['email'] . ")"; ?></li>
+<?php } ?>
+</ul>
+
+<!-- Add a new instructor -->
+<h4>Add New Instructor</h4>
+<form method="POST" action="add_instructor.php">
+    <input type="text" name="name" placeholder="Instructor Name" required>
+    <input type="email" name="email" placeholder="Instructor Email" required>
+    <select name="unit_id" required>
+        <option value="">-- Select Unit --</option>
+        <?php
+        $units_result = mysqli_query($conn, "SELECT * FROM units WHERE department = '$dept'");
+        while ($unit = mysqli_fetch_assoc($units_result)) {
+            echo "<option value='{$unit['id']}'>{$unit['unit_name']}</option>";
+        }
+        ?>
+    </select>
+    <input type="hidden" name="department" value="<?php echo $dept; ?>">
+    <input type="submit" value="Add Instructor">
+</form>
+
+
+
+<?
