@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 04, 2025 at 06:32 AM
+-- Generation Time: Jul 08, 2025 at 06:35 AM
 -- Server version: 8.0.41
 -- PHP Version: 8.3.14
 
@@ -85,8 +85,8 @@ CREATE TABLE IF NOT EXISTS `courses` (
 --
 
 INSERT INTO `courses` (`course_id`, `course`, `department`, `created_at`, `updated_at`) VALUES
-(1, 'D.Clinical Medicine', 'Health Sciences', '2025-06-19 14:06:52', '2025-06-23 13:41:50'),
-(2, 'D.Nursing', 'Health Sciences', '2025-06-19 14:06:52', '2025-06-23 13:42:04');
+(1, 'D.Clinical Medicine', 'D.Clinical Medicine', '2025-06-19 14:06:52', '2025-07-07 09:46:58'),
+(2, 'D.Nursing', 'D.Nursing', '2025-06-19 14:06:52', '2025-07-07 09:47:25');
 
 -- --------------------------------------------------------
 
@@ -345,8 +345,12 @@ CREATE TABLE IF NOT EXISTS `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `data`, `last_accessed`, `created_at`) VALUES
-('d3bps3k0jogchpa73qgvj6lmpa', NULL, '{}', '2025-07-04 02:56:15', '2025-07-04 02:56:15'),
-('q7g7r4vc70h1e1ff8b9ft1dup1', NULL, '{}', '2025-07-03 14:50:49', '2025-07-03 14:50:49');
+('nir0rcrvaj5si2a7155l8msj8f', NULL, '{}', '2025-07-08 05:01:20', '2025-07-08 05:01:20'),
+('pe09nd7sc0qs8gpb81uo21lfve', 3, '\"user_id|i:3;role|s:3:\\\"hod\\\";student_id|N;\"', '2025-07-07 06:30:22', '2025-07-07 06:30:22'),
+('q88hdh9cj4703fhqtoh9kp33p8', 4, '\"user_id|i:4;role|s:7:\\\"finance\\\";student_id|N;\"', '2025-07-07 09:09:35', '2025-07-07 09:09:35'),
+('r30johgf5dathqivahgha5h6sk', 43, '\"user_id|i:43;role|s:10:\\\"instructor\\\";student_id|N;\"', '2025-07-08 06:29:17', '2025-07-08 06:29:17'),
+('s6scsciblta194ce47gd8qihr8', 1, '\"user_id|i:1;role|s:5:\\\"admin\\\";student_id|N;\"', '2025-07-06 16:35:14', '2025-07-06 16:35:14'),
+('t83ica5urc0f9t1d33e98tattp', 1, '\"user_id|i:1;role|s:5:\\\"admin\\\";student_id|N;\"', '2025-07-06 17:01:31', '2025-07-06 17:01:31');
 
 -- --------------------------------------------------------
 
@@ -493,19 +497,21 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_username` (`username`),
   KEY `student_id` (`student_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `username`, `password`, `role`, `student_id`, `created_at`, `updated_at`) VALUES
+(1, 'admin1', '$2y$10$lm5.sGl.rEmT7I.nrrkKD.m.a1/P7t8Mw6xnfNMp43aMD9avFcDRS', 'admin', NULL, '2025-07-05 16:56:11', '2025-07-06 10:04:52'),
 (2, 'instructor1', '$2y$10$EtY51/6lmq/7dvW5dAagtO.MxEd3x5Kd.U5Gyw2/XIAJUKn7ca/j2', 'instructor', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
 (3, 'hod1', '$2y$10$3yUbeZMW3Z0GD2UJZkCMq.9DHhi84Iqn0qFIOVsU24QKKa/ZzB9IW', 'hod', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
 (4, 'finance1', '$2y$10$3yUbeZMW3Z0GD2UJZkCMq.9DHhi84Iqn0qFIOVsU24QKKa/ZzB9IW', 'finance', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
 (13, 'registrar1', '$2y$10$kgZd8ohwj0nVUWIqlksu0uh4LfMhWky55.4QM.IkJe9/zZQ3euiAW', 'registrar', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
 (41, 'ADM1001', '$2y$10$7DoJZPZea9LdtDBhX302t.o0K86Sbg3C1QP4QmHj2Oo/7cLlIctZC', 'student', 'ADM1001', '2025-07-02 07:31:20', '2025-07-03 11:21:44'),
-(42, 'ADM1002', '$2y$10$Iyn0ibRyxW9gEX6jRNOZY.gafMPY3wzbcjsZNot5DjIXgJu5I8mVy', 'student', 'ADM1002', '2025-07-02 08:34:12', '2025-07-02 08:34:12');
+(42, 'ADM1002', '$2y$10$sv8D6JmCcwe6Hlk6J7yLWeK7MrLp8tvoyqPQmwQUxOGLQvrJ9ErMC', 'student', 'ADM1002', '2025-07-02 08:34:12', '2025-07-07 14:19:58'),
+(43, 'pha1', '$2y$10$k23fZo6Fs.9WjmPr1EJzb.w8/QrFnqTN3R.iyqXRGs1nQkPGr/k5S', 'instructor', NULL, '2025-07-07 14:22:10', '2025-07-08 05:13:44');
 
 -- --------------------------------------------------------
 
@@ -527,7 +533,21 @@ CREATE TABLE IF NOT EXISTS `user_details` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `user_details`
+--
+
+INSERT INTO `user_details` (`id`, `user_id`, `name`, `id_number`, `gender`, `phone`, `email`, `designation`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Admin User', '12345678', 'Other', '1234567890', 'admin@kasms.ac.ke', 'System Administrator', '2025-07-05 16:56:11', '2025-07-05 16:56:11'),
+(2, 2, 'instructor1', '234156', 'Male', '0712345678', 'john@example.com', 'instructorict', '2025-07-06 18:43:15', '2025-07-06 18:43:15'),
+(3, 3, 'hod1', '89076245', 'Female', '0786345261', 'hod1@example.com', 'hodnursing', '2025-07-06 19:01:41', '2025-07-06 19:01:41'),
+(4, 4, 'finance1', '7890234', 'Male', '0156734223', 'finance@gmail.com', 'finance', '2025-07-06 19:01:41', '2025-07-06 19:01:41'),
+(13, 13, 'registrar1', '45362891', 'Female', '078645342', 'registrar@gmail.com', 'registrar', '2025-07-06 19:04:20', '2025-07-07 12:56:21'),
+(41, 41, 'CATE WANJIKU', '11443274', 'Female', '714432744', 'cate@gmail.com', 'student', '2025-07-06 19:01:41', '2025-07-07 12:55:52'),
+(42, 42, 'ESTHER KWAMBOKA', '21414835', 'Female', '114148354', 'esther@gmail.com', 'student', '2025-07-06 19:01:41', '2025-07-07 12:56:39'),
+(43, 43, 'MEROBINA BOSIBORI', '21414835', 'Female', '0786456323', 'mero@gmail.com', 'Instrutor Pharmacology I', '2025-07-07 14:22:10', '2025-07-07 14:22:10');
 
 --
 -- Constraints for dumped tables
