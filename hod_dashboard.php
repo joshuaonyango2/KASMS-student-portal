@@ -142,3 +142,4 @@ $instructors_query = mysqli_query($conn, "SELECT instructors.*, units.unit_name 
     <input type="hidden" name="department" value="<?php echo $dept; ?>">
     <input type="submit" value="Add Instructor">
 </form>
+
