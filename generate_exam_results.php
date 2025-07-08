@@ -75,7 +75,7 @@ $pdf->Output('exam_results_' . $semester . '.pdf', 'D');
 $host = "localhost";
 $user = "root";
 $pass = "";
-$db = "campus_portal";
+$db = "kasms_db";
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
