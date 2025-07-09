@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 08, 2025 at 06:35 AM
+-- Generation Time: Jul 09, 2025 at 01:27 PM
 -- Server version: 8.0.41
 -- PHP Version: 8.3.14
 
@@ -107,7 +107,14 @@ CREATE TABLE IF NOT EXISTS `coursework` (
   PRIMARY KEY (`id`),
   KEY `idx_student_unit` (`student_id`,`unit_code`,`semester`),
   KEY `unit_code` (`unit_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `coursework`
+--
+
+INSERT INTO `coursework` (`id`, `student_id`, `unit_code`, `semester`, `cat1`, `version`, `created_at`, `updated_at`) VALUES
+(4, 'ADM1002', 'DCM1_MED101', '2025-S1', 8, 0, '2025-07-09 06:44:34', '2025-07-09 06:44:34');
 
 -- --------------------------------------------------------
 
@@ -191,7 +198,14 @@ CREATE TABLE IF NOT EXISTS `exam_results` (
   PRIMARY KEY (`id`),
   KEY `idx_student_unit` (`student_id`,`unit_code`,`semester`),
   KEY `unit_code` (`unit_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `exam_results`
+--
+
+INSERT INTO `exam_results` (`id`, `student_id`, `unit_code`, `semester`, `final_exam`, `final_grade`, `version`, `created_at`, `updated_at`) VALUES
+(4, 'ADM1002', 'DCM1_MED101', '2025-S1', 35, NULL, 0, '2025-07-09 06:44:34', '2025-07-09 06:44:34');
 
 -- --------------------------------------------------------
 
@@ -219,8 +233,8 @@ CREATE TABLE IF NOT EXISTS `fees` (
 --
 
 INSERT INTO `fees` (`id`, `student_id`, `semester`, `amount_owed`, `amount_paid`, `version`, `created_at`, `updated_at`) VALUES
-(9, 'ADM1001', '2025-S1', 50000.00, 0.00, 0, '2025-07-03 08:56:15', '2025-07-03 08:56:15'),
-(10, 'ADM1002', '2025-S1', 50000.00, 0.00, 0, '2025-07-03 13:32:46', '2025-07-03 13:32:46');
+(9, 'ADM1001', '2025-S1', -150000.00, 30000.00, 0, '2025-07-03 08:56:15', '2025-07-09 12:29:11'),
+(10, 'ADM1002', '2025-S1', -150000.00, -250000.00, 0, '2025-07-03 13:32:46', '2025-07-09 08:49:02');
 
 -- --------------------------------------------------------
 
@@ -236,13 +250,21 @@ CREATE TABLE IF NOT EXISTS `payments` (
   `payment_date` datetime NOT NULL,
   `receipt_number` varchar(50) NOT NULL,
   `service_type` varchar(100) NOT NULL,
+  `payment_method` varchar(50) DEFAULT 'Cash',
   `semester` varchar(20) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`payment_id`),
   UNIQUE KEY `receipt_number` (`receipt_number`),
   KEY `idx_student_semester` (`student_id`,`semester`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `student_id`, `amount`, `payment_date`, `receipt_number`, `service_type`, `payment_method`, `semester`, `created_at`, `updated_at`) VALUES
+(6, 'ADM1001', 40000.00, '2025-07-09 12:29:11', 'REC17520641516590', 'Fee Payment', 'Cash', '2025-S1', '2025-07-09 12:29:11', '2025-07-09 12:29:11');
 
 --
 -- Triggers `payments`
@@ -345,12 +367,12 @@ CREATE TABLE IF NOT EXISTS `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `data`, `last_accessed`, `created_at`) VALUES
-('nir0rcrvaj5si2a7155l8msj8f', NULL, '{}', '2025-07-08 05:01:20', '2025-07-08 05:01:20'),
-('pe09nd7sc0qs8gpb81uo21lfve', 3, '\"user_id|i:3;role|s:3:\\\"hod\\\";student_id|N;\"', '2025-07-07 06:30:22', '2025-07-07 06:30:22'),
-('q88hdh9cj4703fhqtoh9kp33p8', 4, '\"user_id|i:4;role|s:7:\\\"finance\\\";student_id|N;\"', '2025-07-07 09:09:35', '2025-07-07 09:09:35'),
-('r30johgf5dathqivahgha5h6sk', 43, '\"user_id|i:43;role|s:10:\\\"instructor\\\";student_id|N;\"', '2025-07-08 06:29:17', '2025-07-08 06:29:17'),
-('s6scsciblta194ce47gd8qihr8', 1, '\"user_id|i:1;role|s:5:\\\"admin\\\";student_id|N;\"', '2025-07-06 16:35:14', '2025-07-06 16:35:14'),
-('t83ica5urc0f9t1d33e98tattp', 1, '\"user_id|i:1;role|s:5:\\\"admin\\\";student_id|N;\"', '2025-07-06 17:01:31', '2025-07-06 17:01:31');
+('35e47ta648iiprh2mibis5o2pf', 41, '\"user_id|i:41;role|s:7:\\\"student\\\";student_id|s:7:\\\"ADM1001\\\";\"', '2025-07-09 08:50:09', '2025-07-09 08:50:09'),
+('3hn0ekiq1lu65eddv3b85d8vd8', 4, '\"user_id|i:4;role|s:7:\\\"finance\\\";student_id|N;\"', '2025-07-09 13:10:04', '2025-07-09 13:10:04'),
+('5vscl839vce22qtkl45dmaj803', 3, '\"user_id|i:3;role|s:3:\\\"hod\\\";student_id|N;\"', '2025-07-09 09:50:50', '2025-07-09 09:50:50'),
+('j9bnhl07moko6gu6a7b56slbse', NULL, '{}', '2025-07-09 09:48:05', '2025-07-09 09:48:05'),
+('oea3di58ar7hfgttogvgi25782', 43, '\"user_id|i:43;role|s:10:\\\"instructor\\\";student_id|N;\"', '2025-07-09 09:12:58', '2025-07-09 09:12:58'),
+('oqc6ba2n0o9hqjqt1gmahievra', NULL, '{}', '2025-07-09 08:51:46', '2025-07-09 08:51:46');
 
 -- --------------------------------------------------------
 
@@ -379,6 +401,8 @@ CREATE TABLE IF NOT EXISTS `students` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `disability` enum('Yes','No') DEFAULT 'No',
   `course` varchar(50) NOT NULL,
+  `base_fee` decimal(12,2) DEFAULT '100000.00',
+  `current_semester_fee` decimal(12,2) DEFAULT NULL,
   PRIMARY KEY (`student_id`),
   UNIQUE KEY `id_number` (`id_number`),
   KEY `idx_student_id` (`student_id`),
@@ -390,9 +414,9 @@ CREATE TABLE IF NOT EXISTS `students` (
 -- Dumping data for table `students`
 --
 
-INSERT INTO `students` (`student_id`, `name`, `year_of_study`, `id_number`, `gender`, `date_of_birth`, `phone_number`, `email_address`, `postal_address`, `total_billed`, `total_paid`, `confirmed`, `course_id`, `enrollment_year`, `created_at`, `updated_at`, `disability`, `course`) VALUES
-('ADM1001', 'CATE WANJIKU', 1, '11443274', 'Female', '2004-12-02', '714432744', 'cate@gmail.com', '1443', 300000.00, 100000.00, 1, NULL, 2025, '2025-07-02 07:31:20', '2025-07-03 13:31:10', 'No', 'D.Nursing'),
-('ADM1002', 'ESTHER KWAMBOKA', 1, '21414835', 'Female', '2000-02-14', '114148354', 'esther@gmail.com', '1414', 300000.00, 300000.00, 1, NULL, 2025, '2025-07-02 08:34:12', '2025-07-03 13:38:44', 'No', 'D.Clinical Medicine');
+INSERT INTO `students` (`student_id`, `name`, `year_of_study`, `id_number`, `gender`, `date_of_birth`, `phone_number`, `email_address`, `postal_address`, `total_billed`, `total_paid`, `confirmed`, `course_id`, `enrollment_year`, `created_at`, `updated_at`, `disability`, `course`, `base_fee`, `current_semester_fee`) VALUES
+('ADM1001', 'CATE WANJIKU', 1, '11443274', 'Female', '2004-12-02', '714432744', 'cate@gmail.com', '1443', -50000.00, 130000.00, 1, NULL, 2025, '2025-07-02 07:31:20', '2025-07-09 12:29:11', 'No', 'D.Nursing', 100000.00, NULL),
+('ADM1002', 'ESTHER KWAMBOKA', 1, '21414835', 'Female', '2000-02-14', '114148354', 'esther@gmail.com', '1414', 100000.00, 50000.00, 1, NULL, 2025, '2025-07-02 08:34:12', '2025-07-09 08:49:02', 'No', 'D.Clinical Medicine', 100000.00, NULL);
 
 -- --------------------------------------------------------
 
@@ -439,12 +463,12 @@ CREATE TABLE IF NOT EXISTS `units` (
 --
 
 INSERT INTO `units` (`unit_code`, `unit_name`, `course_id`, `instructor_id`, `credits`, `created_at`, `updated_at`, `course`) VALUES
-('DCM1_MED101', 'Anatomy', 1, NULL, 4, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
+('DCM1_MED101', 'Anatomy', 1, 43, 4, '2025-06-23 15:12:36', '2025-07-09 06:36:13', 'D.Clinical Medicine'),
 ('DCM1_MED102', 'Physiology', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
 ('DCM1_MED103', 'Biochemistry', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
 ('DCM1_MED104', 'Microbiology', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
 ('DCM1_MED105', 'Parasitology and Entomology', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
-('DCM1_MED106', 'Pharmacology I', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
+('DCM1_MED106', 'Pharmacology I', 1, 43, 3, '2025-06-23 15:12:36', '2025-07-09 06:36:13', 'D.Clinical Medicine'),
 ('DCM1_MED107', 'Community Health I', 1, NULL, 3, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
 ('DCM2_MED201', 'General Medicine I', 1, NULL, 4, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
 ('DCM2_MED202', 'Surgery I', 1, NULL, 4, '2025-06-23 15:12:36', '2025-07-02 09:53:41', 'D.Clinical Medicine'),
@@ -497,21 +521,22 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_username` (`username`),
   KEY `student_id` (`student_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `username`, `password`, `role`, `student_id`, `created_at`, `updated_at`) VALUES
-(1, 'admin1', '$2y$10$lm5.sGl.rEmT7I.nrrkKD.m.a1/P7t8Mw6xnfNMp43aMD9avFcDRS', 'admin', NULL, '2025-07-05 16:56:11', '2025-07-06 10:04:52'),
-(2, 'instructor1', '$2y$10$EtY51/6lmq/7dvW5dAagtO.MxEd3x5Kd.U5Gyw2/XIAJUKn7ca/j2', 'instructor', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
-(3, 'hod1', '$2y$10$3yUbeZMW3Z0GD2UJZkCMq.9DHhi84Iqn0qFIOVsU24QKKa/ZzB9IW', 'hod', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
-(4, 'finance1', '$2y$10$3yUbeZMW3Z0GD2UJZkCMq.9DHhi84Iqn0qFIOVsU24QKKa/ZzB9IW', 'finance', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
-(13, 'registrar1', '$2y$10$kgZd8ohwj0nVUWIqlksu0uh4LfMhWky55.4QM.IkJe9/zZQ3euiAW', 'registrar', NULL, '2025-06-19 14:06:53', '2025-06-19 14:06:53'),
+(1, 'admin', '$2y$10$h3xszxcW2tr0kflhERuTVuv.WBchJgJELkZyTey3Q1/.LGVmfDwNu', 'admin', NULL, '2025-07-05 16:56:11', '2025-07-08 13:22:53'),
+(2, 'instructor', '', 'instructor', NULL, '2025-06-19 14:06:53', '2025-07-09 08:58:35'),
+(3, 'H.O.D NURSING', '$2y$10$BauozWNgy0peYM3pbs9DZuvDsPXCojU/r4GT3Rh3L8k7YeqA0LHY.', 'hod', NULL, '2025-06-19 14:06:53', '2025-07-08 13:14:45'),
+(4, 'FINANCE', '$2y$10$Ay1c14/1Mt.etvo2xEmXSe10.dCmiPZ4lLtLJEQzkG/tkqs2Xxbue', 'finance', NULL, '2025-06-19 14:06:53', '2025-07-09 08:14:57'),
+(13, 'registrar', '$2y$10$Bps4sdBdyAWBhp1SrQ4nz.UTja3MR2QKRKA8IGDNHJOtPlnAT.uou', 'registrar', NULL, '2025-06-19 14:06:53', '2025-07-08 13:07:15'),
 (41, 'ADM1001', '$2y$10$7DoJZPZea9LdtDBhX302t.o0K86Sbg3C1QP4QmHj2Oo/7cLlIctZC', 'student', 'ADM1001', '2025-07-02 07:31:20', '2025-07-03 11:21:44'),
 (42, 'ADM1002', '$2y$10$sv8D6JmCcwe6Hlk6J7yLWeK7MrLp8tvoyqPQmwQUxOGLQvrJ9ErMC', 'student', 'ADM1002', '2025-07-02 08:34:12', '2025-07-07 14:19:58'),
-(43, 'pha1', '$2y$10$k23fZo6Fs.9WjmPr1EJzb.w8/QrFnqTN3R.iyqXRGs1nQkPGr/k5S', 'instructor', NULL, '2025-07-07 14:22:10', '2025-07-08 05:13:44');
+(43, 'pha1', '$2y$10$k23fZo6Fs.9WjmPr1EJzb.w8/QrFnqTN3R.iyqXRGs1nQkPGr/k5S', 'instructor', NULL, '2025-07-07 14:22:10', '2025-07-08 05:13:44'),
+(44, 'H.O.D CLINICAL MEDICINE', '$2y$10$U54ztcnneGhPk0fiZjm.NeGbc.zgy87n9vvhPFok12USIE6xJipim', 'hod', NULL, '2025-07-08 13:50:38', '2025-07-08 13:58:55');
 
 -- --------------------------------------------------------
 
@@ -533,21 +558,22 @@ CREATE TABLE IF NOT EXISTS `user_details` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `user_details`
 --
 
 INSERT INTO `user_details` (`id`, `user_id`, `name`, `id_number`, `gender`, `phone`, `email`, `designation`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Admin User', '12345678', 'Other', '1234567890', 'admin@kasms.ac.ke', 'System Administrator', '2025-07-05 16:56:11', '2025-07-05 16:56:11'),
-(2, 2, 'instructor1', '234156', 'Male', '0712345678', 'john@example.com', 'instructorict', '2025-07-06 18:43:15', '2025-07-06 18:43:15'),
-(3, 3, 'hod1', '89076245', 'Female', '0786345261', 'hod1@example.com', 'hodnursing', '2025-07-06 19:01:41', '2025-07-06 19:01:41'),
-(4, 4, 'finance1', '7890234', 'Male', '0156734223', 'finance@gmail.com', 'finance', '2025-07-06 19:01:41', '2025-07-06 19:01:41'),
-(13, 13, 'registrar1', '45362891', 'Female', '078645342', 'registrar@gmail.com', 'registrar', '2025-07-06 19:04:20', '2025-07-07 12:56:21'),
+(1, 1, 'Anna Kengere', '12345678', 'Female', '0711954609', 'admin@kasms.ac.ke', 'System Administrator', '2025-07-05 16:56:11', '2025-07-08 13:03:05'),
+(2, 2, 'instructor', '234156', 'Male', '0712345678', 'john@example.com', 'instructor', '2025-07-06 18:43:15', '2025-07-09 08:58:35'),
+(3, 3, 'ROSMARY OMAYO', '89076245', 'Female', '0725664990', 'rosemary@gmail.com', 'H.O.D NURSING', '2025-07-06 19:01:41', '2025-07-08 11:43:29'),
+(4, 4, 'Brian Ochieng', '7890234', 'Male', '0156734223', 'finance@gmail.com', 'finance', '2025-07-06 19:01:41', '2025-07-08 13:05:35'),
+(13, 13, 'DAVID ONSONGO', '45362891', 'Male', '0723969650', 'registrar@gmail.com', 'registrar', '2025-07-06 19:04:20', '2025-07-08 13:07:15'),
 (41, 41, 'CATE WANJIKU', '11443274', 'Female', '714432744', 'cate@gmail.com', 'student', '2025-07-06 19:01:41', '2025-07-07 12:55:52'),
 (42, 42, 'ESTHER KWAMBOKA', '21414835', 'Female', '114148354', 'esther@gmail.com', 'student', '2025-07-06 19:01:41', '2025-07-07 12:56:39'),
-(43, 43, 'MEROBINA BOSIBORI', '21414835', 'Female', '0786456323', 'mero@gmail.com', 'Instrutor Pharmacology I', '2025-07-07 14:22:10', '2025-07-07 14:22:10');
+(43, 43, 'MEROBINA BOSIBORI', '21414835', 'Female', '0786456323', 'mero@gmail.com', 'Instrutor', '2025-07-07 14:22:10', '2025-07-09 08:06:36'),
+(44, 44, 'MOSES OCHIENG', '77828782819', 'Male', '0725825131', 'clinicalmedicine@kasms.ac.ke', 'H.O.D CLINICAL MEDICINE', '2025-07-08 13:50:38', '2025-07-08 14:17:59');
 
 --
 -- Constraints for dumped tables
