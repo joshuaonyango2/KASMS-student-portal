@@ -2,7 +2,7 @@
 require_once 'session_handler.php';
 requireLogin('admin');
 
-$conn = new mysqli("localhost", "root", "0000", "kasms_db");
+$conn = new mysqli("localhost", "root", "", "kasms_db");
 if ($conn->connect_error) {
     error_log("Database connection failed: " . $conn->connect_error);
     die("Connection failed. Please try again later.");

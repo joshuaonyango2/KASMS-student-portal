@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-$conn = new mysqli("localhost", "root", "0000", "kasms_db");
+$conn = new mysqli("localhost", "root", "", "kasms_db");
 if (!$conn) {
     die("Connection failed: " . mysqli_connect_error());
 }

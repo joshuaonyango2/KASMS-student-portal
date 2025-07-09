@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'registrar') {
 }
 
 // Secure database connection
-$conn = mysqli_connect("p:localhost", "root", "0000", "kasms_db");
+$conn = mysqli_connect("p:localhost", "root", "", "kasms_db");
 if (!$conn) {
     error_log("Connection failed at " . date('Y-m-d H:i:s') . ": " . mysqli_connect_error());
     die("An error occurred. Please try again or contact support.");

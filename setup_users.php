@@ -1,5 +1,5 @@
 <?php
-$conn = mysqli_connect("p:localhost", "root", "0000", "kasms_db");
+$conn = mysqli_connect("p:localhost", "root", "", "kasms_db");
 $username = "instructor1";
 $password = "password123"; // Set desired password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);

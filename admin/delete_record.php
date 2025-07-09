@@ -1,6 +1,6 @@
 <?php
 session_start();
-$conn = new mysqli("localhost", "root", "0000", "kasms_db");
+$conn = new mysqli("localhost", "root", "", "kasms_db");
 if ($conn->connect_error) {
     die(json_encode(['error' => 'Database connection failed']));
 }

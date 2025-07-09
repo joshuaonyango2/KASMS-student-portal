@@ -1,5 +1,5 @@
 <?php
-$conn = mysqli_connect("p:localhost", "root", "0000", "kasms_db");
+$conn = mysqli_connect("p:localhost", "root", "", "kasms_db");
 if (!$conn) {
     die("Connection failed: " . mysqli_connect_error());
 }

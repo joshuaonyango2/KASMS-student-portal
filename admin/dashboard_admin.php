@@ -2,7 +2,7 @@
 require_once 'session_handler.php';
 requireLogin('admin');
 
-$conn = new mysqli("localhost", "root", "0000", "kasms_db");
+$conn = new mysqli("localhost", "root", "", "kasms_db");
 if ($conn->connect_error) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'error' => 'Database connection failed']);
