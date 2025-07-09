@@ -2,7 +2,7 @@
 require_once 'session_handler.php';
 requireLogin('admin');
 
-$conn = new mysqli("localhost", "root", "", "kasms_db");
+$conn = new mysqli("localhost", "root", "0000", "kasms_db");
 if ($conn->connect_error) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'error' => 'Database connection failed']);
@@ -354,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="sidebar">
         <h2>Admin Dashboard</h2>
         <ul>
-            <li><a href="#profile" onclick="showSection('profile')">Profile</a></li>
+            <li><a href="#profile" onclick="showSection('profile')">Dashboard</a></li>
             <li><a href="#users" onclick="showSection('users')">Manage Users</a></li>
             <li><a href="#students" onclick="showSection('students')">Manage Students</a></li>
             <li><a href="#courses" onclick="showSection('courses')">Manage Courses</a></li>
@@ -372,7 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="card" id="profile">
-            <h2>Your Profile</h2>
+            <h2>My Profile</h2>
             <div class="form-group">
                 <label>Full Name:</label>
                 <span><?php echo htmlspecialchars($user_details['name']); ?></span>
