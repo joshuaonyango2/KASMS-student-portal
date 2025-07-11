@@ -117,7 +117,7 @@ echo "Hello, KASMS! PHP is working!";
 
 4. **Set Up MySQL**:
    - Open `http://localhost/phpmyadmin` in your browser.
-   - Click “New” to create a database called `kamsms_db`.
+   - Click “New” to create a database called `kasms_db`.
    - We’ll create tables later.
 
 ---
@@ -356,4 +356,3 @@ We’ve set up the environment, created the database, and built the login page. 
 3. **Add JavaScript**: Validate forms and make pages interactive.
 4. **Test Everything**: Make sure all features work.
 
-Would you like me to guide you through creating one of the dashboards (e.g., student dashboard) next, or do you want to focus on something else, like securing passwords or styling the pages more? Let me know, and I’ll keep explaining it like you’re 13!
