@@ -352,6 +352,7 @@ We’ve set up the environment, created the database, and built the login page. 
    - Instructor dashboard: View students and input marks.
    - HOD dashboard: View students by year.
    - Finance dashboard: Update fees.
+   -Admin dashboard
 2. **Secure Passwords**: Use PHP to hash passwords for security.
 3. **Add JavaScript**: Validate forms and make pages interactive.
 4. **Test Everything**: Make sure all features work.

@@ -206,15 +206,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_marks'])) {
     }
 }
 
-// Fetch students for reports with filtering
+// Fetch students for reports with filtering, including marks
 $report_filter_unit = $_POST['report_filter_unit'] ?? '';
 $report_filter_course = $_POST['report_filter_course'] ?? '';
 $report_students = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filter_report'])) {
-    $query = "SELECT s.student_id, s.name, r.unit_code, r.unit_name, u.course 
+    $query = "SELECT s.student_id, s.name, r.unit_code, r.unit_name, u.course, c.cat1, e.final_exam,
+                     COALESCE(c.cat1, 0) + COALESCE(e.final_exam, 0) AS total_score
               FROM students s 
               JOIN registrations r ON s.student_id = r.student_id 
               JOIN units u ON r.unit_code = u.unit_code 
+              LEFT JOIN coursework c ON s.student_id = c.student_id AND r.unit_code = c.unit_code AND r.semester = c.semester 
+              LEFT JOIN exam_results e ON s.student_id = e.student_id AND r.unit_code = e.unit_code AND r.semester = e.semester 
               WHERE r.unit_code IN (SELECT unit_code FROM units WHERE instructor_id = ?) 
               AND r.semester = ?";
     $params = [$instructor_id, $semester];
@@ -243,10 +246,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filter_report'])) {
     }
 } else {
     try {
-        $stmt = $conn->prepare("SELECT s.student_id, s.name, r.unit_code, r.unit_name, u.course 
+        $stmt = $conn->prepare("SELECT s.student_id, s.name, r.unit_code, r.unit_name, u.course, c.cat1, e.final_exam,
+                               COALESCE(c.cat1, 0) + COALESCE(e.final_exam, 0) AS total_score
                                FROM students s 
                                JOIN registrations r ON s.student_id = r.student_id 
                                JOIN units u ON r.unit_code = u.unit_code 
+                               LEFT JOIN coursework c ON s.student_id = c.student_id AND r.unit_code = c.unit_code AND r.semester = c.semester 
+                               LEFT JOIN exam_results e ON s.student_id = e.student_id AND r.unit_code = e.unit_code AND r.semester = e.semester 
                                WHERE r.unit_code IN (SELECT unit_code FROM units WHERE instructor_id = ?) 
                                AND r.semester = ?");
         $stmt->bind_param("is", $instructor_id, $semester);
@@ -257,6 +263,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filter_report'])) {
         error_log("Error fetching report students: " . $e->getMessage());
         die("System error. Please try again later.");
     }
+}
+
+// Handle export requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export'])) {
+    $format = $_POST['export_format'] ?? 'csv';
+    $filename = "student_report_" . date('Ymd_His');
+
+    if ($format === 'csv') {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="' . $filename . '.csv"');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Admission No.', 'Name', 'Unit Code', 'Unit Name', 'Department', 'CAT 1', 'Final Exam', 'Total Score']);
+        foreach ($report_students as $student) {
+            fputcsv($output, [
+                $student['student_id'],
+                $student['name'],
+                $student['unit_code'],
+                $student['unit_name'],
+                $student['course'],
+                $student['cat1'] ?? '-',
+                $student['final_exam'] ?? '-',
+                $student['total_score'] ?? '-'
+            ]);
+        }
+        fclose($output);
+        exit();
+    } elseif ($format === 'pdf') {
+        require_once 'tcpdf/tcpdf.php'; // Adjusted path to C:\wamp64\www\KASMS\tcpdf\tcpdf.php
+        $pdf = new TCPDF();
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor($instructor_name);
+        $pdf->SetTitle('Student Report');
+        $pdf->AddPage();
+        $pdf->SetFont('helvetica', '', 10);
+
+        $html = '<h1>Student Report</h1><table border="1" cellpadding="4">
+                <thead><tr>
+                    <th>Admission No.</th>
+                    <th>Name</th>
+                    <th>Unit Code</th>
+                    <th>Unit Name</th>
+                    <th>Department</th>
+                    <th>CAT 1</th>
+                    <th>Final Exam</th>
+                    <th>Total Score</th>
+                </tr></thead><tbody>';
+        foreach ($report_students as $student) {
+            $html .= '<tr>
+                <td>' . htmlspecialchars($student['student_id']) . '</td>
+                <td>' . htmlspecialchars($student['name']) . '</td>
+                <td>' . htmlspecialchars($student['unit_code']) . '</td>
+                <td>' . htmlspecialchars($student['unit_name']) . '</td>
+                <td>' . htmlspecialchars($student['course']) . '</td>
+                <td>' . ($student['cat1'] ?? '-') . '</td>
+                <td>' . ($student['final_exam'] ?? '-') . '</td>
+                <td>' . ($student['total_score'] ?? '-') . '</td>
+            </tr>';
+        }
+        $html .= '</tbody></table>';
+        $pdf->writeHTML($html, true, false, true, false, '');
+        $pdf->Output($filename . '.pdf', 'D');
+        exit();
+    }elseif ($format === 'excel') {
+    // Include all necessary PhpSpreadsheet files
+    require_once 'PhpSpreadsheet-master/src/PhpSpreadsheet/Writer/BaseWriter.php';
+    require_once 'PhpSpreadsheet-master/src/PhpSpreadsheet/Spreadsheet.php';
+    require_once 'PhpSpreadsheet-master/src/PhpSpreadsheet/Writer/IWriter.php';
+    require_once 'PhpSpreadsheet-master/src/PhpSpreadsheet/Writer/Xlsx.php';
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Student Report');
+    
+    // Headers
+    $sheet->setCellValue('A1', 'Admission No.');
+    $sheet->setCellValue('B1', 'Name');
+    $sheet->setCellValue('C1', 'Unit Code');
+    $sheet->setCellValue('D1', 'Unit Name');
+    $sheet->setCellValue('E1', 'Department');
+    $sheet->setCellValue('F1', 'CAT 1');
+    $sheet->setCellValue('G1', 'Final Exam');
+    $sheet->setCellValue('H1', 'Total Score');
+
+    // Data
+    $row = 2;
+    foreach ($report_students as $student) {
+        $sheet->setCellValue('A' . $row, $student['student_id']);
+        $sheet->setCellValue('B' . $row, $student['name']);
+        $sheet->setCellValue('C' . $row, $student['unit_code']);
+        $sheet->setCellValue('D' . $row, $student['unit_name']);
+        $sheet->setCellValue('E' . $row, $student['course']);
+        $sheet->setCellValue('F' . $row, $student['cat1'] ?? '-');
+        $sheet->setCellValue('G' . $row, $student['final_exam'] ?? '-');
+        $sheet->setCellValue('H' . $row, $student['total_score'] ?? '-');
+        $row++;
+    }
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit();
+}
 }
 
 $conn->close();
@@ -542,11 +651,28 @@ $conn->close();
             font-size: 0.7rem;
             font-weight: bold;
         }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-table {
+                width: 100%;
+                font-size: 10pt;
+            }
+            body {
+                background: white;
+                margin: 0;
+            }
+            .table-container {
+                box-shadow: none;
+            }
+        }
     </style>
 </head>
 <body class="flex min-h-screen">
     <!-- Sidebar -->
-    <div class="w-64 sidebar text-white h-full fixed p-4 flex flex-col">
+    <div class="w-64 sidebar text-white h-full fixed p-4 flex flex-col no-print">
         <div class="text-2xl font-bold mb-6 mt-2 flex items-center gap-2">
             <i class="fas fa-graduation-cap"></i>
             <span>KASMS Portal</span>
@@ -585,7 +711,7 @@ $conn->close();
 
     <!-- Main Content -->
     <div class="ml-64 p-6 w-full">
-        <header class="header p-5 mb-6 flex justify-between items-center text-white rounded-xl">
+        <header class="header p-5 mb-6 flex justify-between items-center text-white rounded-xl no-print">
             <div>
                 <h1 class="text-2xl font-bold">Instructor Dashboard</h1>
                 <p class="opacity-90">Welcome back, <?php echo $instructor_name; ?></p>
@@ -1022,7 +1148,7 @@ $conn->close();
             </div>
             
             <?php if ($report_students): ?>
-                <form method="POST" class="space-y-6 mb-6">
+                <form method="POST" class="space-y-6 mb-6 no-print">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label for="report_filter_unit" class="block text-sm font-medium text-gray-700 mb-1">Filter by Unit</label>
@@ -1057,7 +1183,7 @@ $conn->close();
                     </div>
                 </form>
                 
-                <div class="table-container">
+                <div class="table-container print-table">
                     <table class="min-w-full">
                         <thead>
                             <tr>
@@ -1066,7 +1192,9 @@ $conn->close();
                                 <th class="text-left">Unit Code</th>
                                 <th class="text-left">Unit Name</th>
                                 <th class="text-left">Department</th>
-                                <th class="text-left">Actions</th>
+                                <th class="text-left">CAT 1</th>
+                                <th class="text-left">Final Exam</th>
+                                <th class="text-left">Total Score</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1077,33 +1205,35 @@ $conn->close();
                                     <td><?php echo htmlspecialchars($student['unit_code']); ?></td>
                                     <td><?php echo htmlspecialchars($student['unit_name']); ?></td>
                                     <td><?php echo htmlspecialchars($student['course']); ?></td>
-                                    <td>
-                                        <button class="text-primary hover:text-primary-dark flex items-center gap-1">
-                                            <i class="fas fa-file-pdf"></i>
-                                            Report
-                                        </button>
-                                    </td>
+                                    <td><?php echo htmlspecialchars($student['cat1'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($student['final_exam'] ?? '-'); ?></td>
+                                    <td><?php echo htmlspecialchars($student['total_score'] ?? '-'); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
                 
-                <div class="mt-6 flex justify-between items-center">
+                <form method="POST" class="mt-6 flex justify-between items-center no-print">
                     <div class="text-sm text-gray-600">
                         Showing <?php echo count($report_students); ?> of <?php echo count($report_students); ?> records
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn-outline px-4 py-2 rounded-lg flex items-center gap-2">
+                        <select name="export_format" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary">
+                            <option value="csv">Export as CSV</option>
+                            <option value="pdf">Export as PDF</option>
+                            <option value="excel">Export as Excel</option>
+                        </select>
+                        <button type="submit" name="export" class="btn-outline px-4 py-2 rounded-lg flex items-center gap-2">
                             <i class="fas fa-download"></i>
-                            Export CSV
+                            Export
                         </button>
-                        <button class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2">
+                        <button type="button" onclick="window.print()" class="btn-primary px-4 py-2 rounded-lg flex items-center gap-2">
                             <i class="fas fa-print"></i>
                             Print Report
                         </button>
                     </div>
-                </div>
+                </form>
             <?php else: ?>
                 <div class="text-center py-12">
                     <div class="mx-auto w-24 h-24 rounded-full bg-blue-50 flex items-center justify-center mb-4">
@@ -1116,7 +1246,7 @@ $conn->close();
         </div>
     </div>
     
-    <div class="floating-btn" onclick="toggleSection('dashboard')">
+    <div class="floating-btn no-print" onclick="toggleSection('dashboard')">
         <i class="fas fa-home"></i>
     </div>
 
